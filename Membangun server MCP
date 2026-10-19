@@ -1,0 +1,606 @@
+> ## Indeks Dokumentasi
+> Dapatkan indeks dokumentasi lengkap di: https://modelcontextprotocol.io/llms.txt
+Gunakan berkas ini untuk menemukan semua halaman yang tersedia sebelum menjelajahi lebih lanjut.
+
+# Membangun server MCP
+
+> Mulailah membangun server Anda sendiri untuk digunakan di Claude untuk Desktop dan klien lainnya.
+
+Dalam tutorial ini, kita akan membangun server cuaca MCP sederhana dan menghubungkannya ke host, Claude for Desktop.
+
+### Apa yang akan kita bangun
+
+Kita akan membangun server yang mengekspos dua alat: `get_alerts` dan `get_forecast`. Kemudian kita akan menghubungkan server ke host MCP (dalam hal ini, Claude for Desktop):
+
+<Bingkai>
+  <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/current-weather.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=dce7b2f8a06c20ba358e4bd2e75fa4c7" width="2780" height="1849" data-path="images/current-weather.png" />
+</Frame>
+
+<Catatan>
+  Server dapat terhubung ke klien mana pun. Kami memilih Claude untuk Desktop di sini karena kesederhanaannya, tetapi kami juga memiliki panduan tentang [membangun klien Anda sendiri](/docs/2026-07-28/develop/build-client).
+</Catatan>
+
+### Konsep Inti MCP
+
+Server MCP dapat menyediakan tiga jenis kemampuan utama:
+
+1. **[Sumber Daya](/docs/2026-07-28/learn/server-concepts#resources)**: Data mirip file yang dapat dibaca oleh klien (seperti respons API atau isi file)
+2. **[Tools](/docs/2026-07-28/learn/server-concepts#tools)**: Fungsi-fungsi yang dapat dipanggil oleh LLM (dengan persetujuan pengguna)
+3. **[Prompts](/docs/2026-07-28/learn/server-concepts#prompts)**: Templat yang sudah ditulis sebelumnya yang membantu pengguna menyelesaikan tugas-tugas tertentu
+
+Tutorial ini akan berfokus terutama pada alat-alat.
+
+<Tab>
+  <Tab title="Python">
+    Mari kita mulai membangun server cuaca kita! [Anda dapat menemukan kode lengkap untuk apa yang akan kita bangun di sini.](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/weather-server-python)
+
+    ### Pengetahuan prasyarat
+
+    Panduan singkat ini mengasumsikan Anda sudah familiar dengan:
+
+    * Python
+    * LLM seperti Claude
+
+    ### Masuk ke Server MCP
+
+    Saat mengimplementasikan server MCP, berhati-hatilah dalam menangani pencatatan log:
+
+    **Untuk server berbasis STDIO:** Jangan pernah menulis ke stdout. Menulis ke stdout akan merusak pesan JSON-RPC dan menghentikan server Anda. Fungsi `print()` secara default menulis ke stdout, jadi hindari penggunaannya di server STDIO sama sekali.
+
+    **Untuk server berbasis HTTP:** Pencatatan output standar sudah cukup karena tidak mengganggu respons HTTP.
+
+    ### Praktik Terbaik
+
+    * Gunakan modul `logging` dari pustaka standar, yang menulis ke stderr.
+    * Buat satu logger per modul dengan `logging.getLogger(__name__)` dan panggil dari tools Anda.
+
+    ### Contoh Singkat
+
+    ```tema python={null}
+    impor pencatatan
+
+    logger = logging.getLogger(__name__)
+
+    # ❌ Buruk (STDIO)
+    print("Memproses permintaan")
+
+    # ✅ Bagus (STDIO)
+    logger.info("Memproses permintaan") # menulis ke stderr
+    ```
+
+    ### Persyaratan sistem
+
+    * Python 3.10 atau versi lebih tinggi terpasang.
+    * Anda harus menggunakan Python MCP SDK 2.0.0 atau lebih tinggi.
+
+    ### Siapkan lingkungan Anda
+
+    Pertama, mari kita instal `uv` dan siapkan proyek serta lingkungan Python kita:
+
+    <CodeGroup>
+      ```bash macOS/Linux theme={null}
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      ```
+
+      ```powershell Windows theme={null}
+      powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+      ```
+    </CodeGroup>
+
+    Pastikan untuk memulai ulang terminal Anda setelahnya untuk memastikan bahwa perintah `uv` dapat dijalankan.
+
+    Sekarang, mari kita buat dan siapkan proyek kita:
+
+    <CodeGroup>
+      ```bash macOS/Linux theme={null}
+      # Buat direktori baru untuk proyek kita
+      cuaca awal uv
+      cuaca cd
+
+      # Buat lingkungan virtual dan aktifkan
+      uv venv
+      sumber .venv/bin/aktifkan
+
+      # Instal dependensi
+      uv tambahkan "mcp[cli]"
+
+      # Buat file server kita
+      sentuh weather.py
+      ```
+
+      ```powershell Windows theme={null}
+      # Buat direktori baru untuk proyek kita
+      cuaca awal uv
+      cuaca cd
+
+      # Buat lingkungan virtual dan aktifkan
+      uv venv
+      .venv\Scripts\activate
+
+      # Instal dependensi
+      uv add mcp[cli]
+
+      # Buat file server kita
+      item baru weather.py
+      ```
+    </CodeGroup>
+
+    Sekarang mari kita mulai membangun server Anda.
+
+    ## Membangun server Anda
+
+    ### Mengimpor paket dan menyiapkan instance
+
+    Tambahkan ini ke bagian atas file `weather.py` Anda:
+
+    ```tema python={null}
+    dari pengetikan impor Apa pun
+
+    impor httpx2
+    dari mcp.server impor MCPServer
+
+    # Inisialisasi MCPServer
+    mcp = MCPServer("cuaca")
+
+    # Konstanta
+    NWS_API_BASE = "https://api.weather.gov"
+    AGEN_PENGGUNA = "aplikasi-cuaca/1.0"
+    ```
+
+    `httpx2` adalah klien HTTP yang dibutuhkan oleh SDK itu sendiri, jadi menginstal `mcp` sudah menyertakannya.
+
+    Kelas MCPServer menggunakan petunjuk tipe dan docstring Python untuk secara otomatis menghasilkan definisi alat, sehingga memudahkan pembuatan dan pemeliharaan alat MCP.
+
+    ### Fungsi pembantu
+
+    Selanjutnya, mari kita tambahkan fungsi pembantu kita untuk melakukan kueri dan memformat data dari API Layanan Cuaca Nasional:
+
+    ```tema python={null}
+    async def make_nws_request(url: str) -> dict[str, Any] | None:
+        "Kirim permintaan ke API NWS dengan penanganan kesalahan yang tepat.""
+        header = {"Agen Pengguna": USER_AGENT, "Terima": "application/geo+json"}
+        async dengan httpx2.AsyncClient() sebagai klien:
+            mencoba:
+                respons = await client.get(url, headers=headers, timeout=30.0)
+                respons.angkat_untuk_status()
+                kembalikan respons.json()
+            kecuali Pengecualian:
+                kembalikan Tidak ada
+
+
+    def format_alert(feature: dict) -> str:
+        """Format fitur peringatan menjadi string yang mudah dibaca."""
+        properti = fitur["properti"]
+        kembali f"""
+    Acara: {props.get("event", "Tidak diketahui")}
+    Area: {props.get("areaDesc", "Tidak Diketahui")}
+    Tingkat keparahan: {props.get("severity", "Tidak diketahui")}
+    Deskripsi: {props.get("description", "Tidak ada deskripsi yang tersedia")}
+    Instruksi: {props.get("instruction", "Tidak ada instruksi khusus yang diberikan")}
+    """
+    ```
+
+    ### Menerapkan eksekusi alat
+
+    Pengelola eksekusi alat bertanggung jawab untuk benar-benar mengeksekusi logika setiap alat. Mari kita tambahkan:
+
+    ```tema python={null}
+    @mcp.tool()
+    async def get_alerts(state: str) -> str:
+        Dapatkan peringatan cuaca untuk sebuah negara bagian di AS.
+
+        Argumen:
+            negara bagian: Kode negara bagian AS dua huruf (misalnya CA, NY)
+        """
+        url = f"{NWS_API_BASE}/alerts/active/area/{state}"
+        data = await make_nws_request(url)
+
+        jika bukan data atau "fitur" tidak ada dalam data:
+            mengembalikan "Tidak dapat mengambil peringatan atau tidak ada peringatan yang ditemukan."
+
+        jika data["features"] tidak ada:
+            kembali "Tidak ada peringatan aktif untuk negara bagian ini."
+
+        peringatan = [format_alert(fitur) untuk fitur dalam data["fitur"]]
+        kembalikan "\n---\n".gabungkan(peringatan)
+
+
+    @mcp.tool()
+    async def get_forecast(latitude: float, longitude: float) -> str:
+        Dapatkan ramalan cuaca untuk suatu lokasi.
+
+        Argumen:
+            lintang: Garis lintang lokasi
+            Bujur: Garis bujur lokasi tersebut
+        """
+        # Pertama, dapatkan titik akhir grid perkiraan
+        points_url = f"{NWS_API_BASE}/points/{latitude},{longitude}"
+        points_data = await make_nws_request(points_url)
+
+        jika tidak ada data poin:
+            mengembalikan "Tidak dapat mengambil data prakiraan cuaca untuk lokasi ini."
+
+        # Dapatkan URL prakiraan dari respons poin
+        forecast_url = points_data["properties"]["forecast"]
+        data_ramalan = tunggu permintaan_perkiraan_url_ramalan
+
+        jika tidak ada forecast_data:
+            mengembalikan "Tidak dapat mengambil prakiraan terperinci."
+
+        # Format periode menjadi perkiraan yang mudah dibaca
+        periode = data_perkiraan["properti"]["periode"]
+        prakiraan = []
+        for period in periods[:5]: # Hanya tampilkan 5 periode berikutnya
+            perkiraan = f"""
+    {periode["nama"]}:
+    Suhu: {periode["temperature"]}°{periode["temperatureUnit"]}
+    Angin: {period["windSpeed"]} {period["windDirection"]}
+    Prakiraan: {periode["detailedForecast"]}
+    """
+            prakiraan.tambahkan(prakiraan)
+
+        kembalikan "\n---\n".gabungkan(perkiraan)
+    ```
+
+    ### Menjalankan server
+
+    Terakhir, mari kita inisialisasi dan jalankan server:
+
+    ```tema python={null}
+    jika __name__ == "__main__":
+        mcp.run(transport="stdio")
+    ```
+
+    Server Anda sudah selesai! Jalankan `uv run weather.py` untuk memulai server MCP, yang akan mendengarkan pesan dari host MCP.
+
+    Sekarang mari kita uji server Anda dari host MCP yang sudah ada, Claude for Desktop.
+
+    ## Menguji server Anda dengan Claude untuk Desktop
+
+    Pertama, pastikan Anda telah menginstal Claude untuk Desktop. [Anda dapat menginstal versi terbaru]
+    [Unduh di sini.](https://claude.ai/download) Jika Anda sudah memiliki Claude untuk Desktop, **pastikan sudah diperbarui ke versi terbaru.**
+
+    Kita perlu mengkonfigurasi Claude for Desktop untuk server MCP mana pun yang ingin Anda gunakan. Untuk melakukan ini, buka konfigurasi Aplikasi Claude for Desktop Anda di `~/Library/Application Support/Claude/claude_desktop_config.json` menggunakan editor teks. Pastikan untuk membuat file tersebut jika belum ada.
+
+    Sebagai contoh, jika Anda telah menginstal [VS Code](https://code.visualstudio.com/):
+
+    <CodeGroup>
+      ```bash Linux theme={null}
+      kode ~/.config/Claude/claude_desktop_config.json
+      ```
+
+      ```bash macOS theme={null}
+      kode ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows theme={null}
+      kode $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    Kemudian, Anda akan menambahkan server Anda di kunci `mcpServers`. Elemen UI MCP hanya akan muncul di Claude for Desktop jika setidaknya satu server telah dikonfigurasi dengan benar.
+
+    Dalam hal ini, kita akan menambahkan server cuaca tunggal kita seperti ini:
+
+    <CodeGroup>
+      ```json tema macOS/Linux={null}
+      {
+        "mcpServers": {
+          "cuaca": {
+            "perintah": "uv",
+            "argumen": [
+              "--direktori",
+              "/JALUR/ABSOLUTE/KE/FOLDER/INDUK/cuaca",
+              "berlari",
+              "cuaca.py"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows theme={null}
+      {
+        "mcpServers": {
+          "cuaca": {
+            "perintah": "uv",
+            "argumen": [
+              "--direktori",
+              "C:\\JALUR\\ABSOLUTE\\KE\\FOLDER\\INDUK\\cuaca",
+              "berlari",
+              "cuaca.py"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    <Peringatan>
+      Anda mungkin perlu memasukkan jalur lengkap ke file executable `uv` di kolom `command`. Anda bisa mendapatkannya dengan menjalankan `which uv` di macOS/Linux atau `where uv` di Windows.
+    </Peringatan>
+
+    <Catatan>
+      Pastikan Anda memasukkan jalur absolut ke server Anda. Anda bisa mendapatkannya dengan menjalankan `pwd` di macOS/Linux atau `cd` di Command Prompt Windows. Di Windows, ingatlah untuk menggunakan garis miring terbalik ganda (`\\`) atau garis miring (`/`) dalam jalur JSON.
+    </Catatan>
+
+    Ini memberi tahu Claude untuk Desktop:
+
+    1. Ada server MCP bernama "cuaca"
+    2. Untuk menjalankannya, jalankan `uv --directory /ABSOLUTE/PATH/TO/PARENT/FOLDER/weather run weather.py`
+
+    Simpan file tersebut, lalu mulai ulang **Claude for Desktop**.
+  </Tab>
+
+  <Tab title="TypeScript">
+    Mari kita mulai membangun server cuaca kita! [Anda dapat menemukan kode lengkap untuk apa yang akan kita bangun di sini.](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/weather-server-typescript)
+
+    ### Pengetahuan prasyarat
+
+    Panduan singkat ini mengasumsikan Anda sudah familiar dengan:
+
+    * TypeScript
+    * LLM seperti Claude
+
+    ### Masuk ke Server MCP
+
+    Saat mengimplementasikan server MCP, berhati-hatilah dalam menangani pencatatan log:
+
+    **Untuk server berbasis STDIO:** Jangan pernah menggunakan `console.log()`, karena secara default fungsi ini menulis ke output standar (stdout). Menulis ke stdout akan merusak pesan JSON-RPC dan menyebabkan server Anda tidak berfungsi.
+
+    **Untuk server berbasis HTTP:** Pencatatan output standar sudah cukup karena tidak mengganggu respons HTTP.
+
+    ### Praktik Terbaik
+
+    * Gunakan `console.error()` yang menulis ke stderr, atau gunakan pustaka pencatatan (logging library) yang menulis ke stderr atau file.
+
+    ### Contoh Singkat
+
+    ```tema javascript={null}
+    // ❌ Buruk (STDIO)
+    console.log("Server telah dimulai");
+
+    // ✅ Bagus (STDIO)
+    console.error("Server started"); // stderr is safe
+    ```
+
+    ### Persyaratan sistem
+
+    Untuk TypeScript, pastikan Anda telah menginstal versi Node terbaru.
+
+    ### Siapkan lingkungan Anda
+
+    Pertama, mari kita instal Node.js dan npm jika Anda belum melakukannya. Anda dapat mengunduhnya dari [nodejs.org](https://nodejs.org/).
+    Periksa instalasi Node.js Anda:
+
+    ```bash theme={null}
+    node --versi
+    npm --versi
+    ```
+
+    Untuk tutorial ini, Anda memerlukan Node.js versi 20 atau lebih tinggi.
+
+    Sekarang, mari kita buat dan siapkan proyek kita:
+
+    <CodeGroup>
+      ```bash macOS/Linux theme={null}
+      # Buat direktori baru untuk proyek kita
+      cuaca mkdir
+      cuaca cd
+
+      # Inisialisasi proyek npm baru
+      npm init -y
+
+      # Instal dependensi
+      npm install @modelcontextprotocol/server zod
+      npm install -D @types/node typescript
+
+      # Buat file kita
+      mkdir src
+      sentuh src/index.ts
+      ```
+
+      ```powershell Windows theme={null}
+      # Buat direktori baru untuk proyek kita
+      cuaca MD
+      cuaca cd
+
+      # Inisialisasi proyek npm baru
+      npm init -y
+
+      # Instal dependensi
+      npm install @modelcontextprotocol/server zod
+      npm install -D @types/node typescript
+
+      # Buat file kita
+      md src
+      item baru src\index.ts
+      ```
+    </CodeGroup>
+
+    Perbarui file package.json Anda dengan menambahkan type: "module" dan skrip build:
+
+    ```json package.json theme={null}
+    {
+      "tipe": "modul",
+      "tempat sampah": {
+        "cuaca": "./build/index.js"
+      },
+      "skrip": {
+        "build": "tsc && chmod 755 build/index.js"
+      },
+      "file": ["bangun"]
+    }
+    ```
+
+    Buat file `tsconfig.json` di direktori root proyek Anda:
+
+    ```json tsconfig.json theme={null}
+    {
+      "opsi kompiler": {
+        "target": "ES2022",
+        "modul": "Node16",
+        "resolusi modul": "Node16",
+        "tipe": ["node"],
+        "outDir": "./build",
+        "rootDir": "./src",
+        "ketat": benar,
+        "esModuleInterop": benar,
+        "skipLibCheck": benar,
+        "forceConsistentCasingInFileNames": true
+      },
+      "sertakan": ["src/**/*"],
+      "kecualikan": ["modul_node"]
+    }
+    ```
+
+    Sekarang mari kita mulai membangun server Anda.
+
+    ## Membangun server Anda
+
+    ### Mengimpor paket dan mengatur konstanta
+
+    Tambahkan ini ke bagian atas `src/index.ts` Anda:
+
+    ```tema typescript={null}
+    impor { McpServer } dari "@modelcontextprotocol/server";
+    impor { serveStdio } dari "@modelcontextprotocol/server/stdio";
+    impor { z } dari "zod";
+
+    const NWS_API_BASE = "https://api.weather.gov";
+    const USER_AGENT = "aplikasi cuaca/1.0";
+    ```
+
+    ### Fungsi pembantu
+
+    Selanjutnya, mari kita tambahkan fungsi pembantu kita untuk melakukan kueri dan memformat data dari API Layanan Cuaca Nasional:
+
+    ```tema typescript={null}
+    // Fungsi pembantu untuk melakukan permintaan API NWS
+    fungsi asinkron makeNWSRequest<T>(url: string): Promise<T | null> {
+      const headers = {
+        "Agen Pengguna": USER_AGENT,
+        Terima: "application/geo+json",
+      };
+
+      mencoba {
+        const response = await fetch(url, { headers });
+        jika (!respons.ok) {
+          throw new Error(`Kesalahan HTTP! status: ${response.status}`);
+        }
+        kembalikan (tunggu respons.json()) sebagai T;
+      } tangkap (kesalahan) {
+        console.error("Terjadi kesalahan saat melakukan permintaan NWS:", error);
+        kembalikan null;
+      }
+    }
+
+    antarmuka AlertFeature {
+      properti: {
+        acara?: string;
+        Deskripsi area?: string;
+        tingkat keparahan?: string;
+        status?: string;
+        judul?: string;
+      };
+    }
+
+    // Format data peringatan
+    fungsi formatAlert(fitur: AlertFeature): string {
+      konstanta props = fitur.properti;
+      kembali [
+        `Acara: ${props.event || "Tidak Diketahui"}`,
+        `Area: ${props.areaDesc || "Tidak Diketahui"}`,
+        `Tingkat Keparahan: ${props.severity || "Tidak Diketahui"}`,
+        `Status: ${props.status || "Tidak Diketahui"}`,
+        `Judul: ${props.headline || "Tidak ada judul"}`,
+        "---",
+      ].join("\n");
+    }
+
+    antarmuka ForecastPeriod {
+      nama?: string;
+      Suhu?: angka;
+      Satuan suhu?: string;
+      Kecepatan angin?: string;
+      Arah angin?: string;
+      Prakiraan singkat?: string;
+    }
+
+    antarmuka AlertsResponse {
+      fitur: AlertFeature[];
+    }
+
+    antarmuka PointsResponse {
+      properti: {
+        Ramalan cuaca?: string;
+      };
+    }
+
+    antarmuka ForecastResponse {
+      properti: {
+        periode: ForecastPeriod[];
+      };
+    }
+    ```
+
+    ### Menerapkan eksekusi alat
+
+    Handler eksekusi alat bertanggung jawab untuk benar-benar mengeksekusi logika setiap alat. Mari kita tambahkan di dalam fungsi `createServer()` yang membangun instance server dan mendaftarkan kedua alat tersebut di dalamnya:
+
+    ```tema typescript={null}
+    // Buat instance server dan daftarkan alat-alatnya. serveStdio memanggil ini
+    // Setiap kali membutuhkan sebuah instance, maka setiap panggilan harus mengembalikan instance yang baru.
+    fungsi createServer() {
+      const server = new McpServer({
+        nama: "cuaca",
+        versi: "1.0.0",
+      });
+
+      server.registerTool(
+        "mendapatkan_peringatan",
+        {
+          deskripsi: "Dapatkan peringatan cuaca untuk suatu negara bagian",
+          inputSchema: z.object({
+            keadaan: z
+              .rangkaian()
+              .panjang(2)
+              .describe("Kode negara bagian dua huruf (misalnya CA, NY)"),
+          }),
+        },
+        asinkron ({ state }) => {
+          const stateCode = state.toUpperCase();
+          const alertsUrl = `${NWS_API_BASE}/alerts?area=${stateCode}`;
+          const alertsData = await makeNWSRequest<AlertsResponse>(alertsUrl);
+
+          jika (!alertsData) {
+            kembali {
+              isi: [
+                {
+                  tipe: "teks",
+                  teks: "Gagal mengambil data peringatan",
+                },
+              ],
+            };
+          }
+
+          const features = alertsData.features || [];
+          jika (!panjang fitur) {
+            kembali {
+              isi: [
+                {
+                  tipe: "teks",
+                  teks: `Tidak ada peringatan aktif untuk ${stateCode}`,
+                },
+              ],
+            };
+          }
+
+          const formattedAlerts = features.map(formatAlert);
+          const alertsText = `Peringatan aktif untuk ${stateCode}:\n\n${formattedAlerts.join("\n")}`;
+
+          kembali {
+            isi: [
+              {
+                tipe: "teks",
+                teks: peringatanTeks
