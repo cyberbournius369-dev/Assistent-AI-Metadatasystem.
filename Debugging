@@ -1,0 +1,372 @@
+> ## Indeks Dokumentasi
+> Dapatkan indeks dokumentasi lengkap di: https://modelcontextprotocol.io/llms.txt
+Gunakan berkas ini untuk menemukan semua halaman yang tersedia sebelum menjelajahi lebih lanjut.
+
+# Debugging
+
+> Panduan komprehensif untuk melakukan debugging integrasi Model Context Protocol (MCP)
+
+Debugging yang efektif sangat penting saat mengembangkan server MCP atau mengintegrasikannya.
+dengan aplikasi-aplikasi tersebut. Panduan ini mencakup alat dan pendekatan debugging.
+tersedia di ekosistem MCP.
+
+## Gambaran umum alat debugging
+
+MCP menyediakan beberapa alat untuk melakukan debugging pada berbagai tingkatan:
+
+1. **[MCP Inspector](/docs/2026-07-28/tools/inspector)**: interaktif, tidak bergantung pada protokol transport
+   Pengujian UI. Hubungkan ke server HTTP stdio atau Streamable, jalankan
+   [alat](/spesifikasi/terbaru/server/alat),
+   [prompt](/spesifikasi/terbaru/server/prompt), dan
+   [sumber daya](/spesifikasi/terbaru/server/sumber daya), dan perhatikan
+   Aliran notifikasi. Ini seharusnya menjadi tempat pertama yang Anda kunjungi.
+2. **Pencatatan log server**: log terstruktur ke stderr (transportasi stdio) atau melalui
+   [OpenTelemetry](https://opentelemetry.io/) (semua transportasi).
+   [Pencatatan](/spesifikasi/2026-07-28/server/utilitas/pencatatan) melalui protokol
+   (`notifications/message`) sudah usang sejak versi protokol `2026-07-28`.
+3. **Alat pengembang klien**: sebagian besar klien MCP menampilkan log dan koneksi.
+   Lihat [Debugging di Claude Desktop](#debugging-in-claude-desktop)
+   Berikut adalah salah satu contohnya, atau lihat dokumentasi klien Anda.
+
+## Menerapkan pencatatan log
+
+### Pencatatan log sisi server
+
+Saat membangun server yang menggunakan sumber daya lokal
+[transport stdio](/spesifikasi/2026-07-28/dasar/transport/stdio), semua pesan
+Pesan kesalahan yang tercatat di stderr (standard error) akan ditangkap oleh aplikasi host.
+secara otomatis.
+
+<Peringatan>
+  Server MCP lokal tidak boleh mencatat pesan ke stdout (output standar), karena hal ini
+  akan mengganggu pengoperasian protokol.
+</Peringatan>
+
+Untuk server yang menggunakan
+[Transport HTTP yang dapat di-streaming](/spesifikasi/2026-07-28/dasar/transport/streamable-http),
+Output stderr tidak ditangkap oleh klien. Gunakan agregasi log sisi server Anda sendiri.
+atau [OpenTelemetry](https://opentelemetry.io/) untuk log, dan HTTP standar.
+alat bantu (curl, panel DevTools Network di browser) untuk memeriksa permintaan dan SSE.
+aliran.
+
+<Peringatan>
+  Mekanisme `notifikasi/pesan` di bawah ini sudah usang sejak protokol ini.
+  versi `2026-07-28`. Versi ini tetap tersedia selama masa penghentian dukungan.
+</Peringatan>
+
+Untuk semua [transportasi](/spesifikasi/terbaru/dasar/transportasi), catat apa yang
+Server melakukan hal berikut saat berjalan:
+
+<CodeGroup>
+  ```python Tema Python={null}
+  impor pencatatan
+
+  dari mcp.server impor MCPServer
+
+  logger = logging.getLogger(__name__)
+
+  mcp = MCPServer("reports")
+
+
+  @mcp.tool()
+  async def fetch_report(report_id: str) -> str:
+      """Ambil laporan berdasarkan ID."""
+      logger.info("Mengambil laporan %s", report_id)
+      return f"Laporan {report_id} sudah siap."
+  ```
+
+  ```typescript TypeScript theme={null}
+  tunggu server.kirimPesanLogging({
+    level: "info",
+    data: "Server berhasil dimulai",
+  });
+  ```
+</CodeGroup>
+
+MCP mendefinisikan delapan
+[Tingkat keparahan RFC 5424](/spesifikasi/terbaru/server/utilitas/pencatatan#tingkat-log)
+(`debug` hingga `emergency`). Klien memilih untuk mencatat pesan per permintaan dengan
+mengatur
+[`io.modelcontextprotocol/logLevel`](/specification/2026-07-28/server/utilities/logging#per-request-log-level)
+kolom di `_meta` permintaan. Server tidak boleh mengirim `notifications/message`.
+untuk permintaan yang tidak menyertakan kolom ini.
+
+Peristiwa penting yang perlu dicatat:
+
+* Langkah-langkah memulai
+* Akses sumber daya
+* Eksekusi alat
+* Kondisi kesalahan
+* Metrik kinerja
+
+## Masalah umum
+
+Contoh-contoh di bawah ini menggunakan Claude Desktop.
+[`claude_desktop_config.json`](/docs/2026-07-28/develop/connect-local-servers); sama
+Prinsip-prinsip ini berlaku untuk semua klien MCP berbasis studio.
+
+### Direktori kerja
+
+Saat klien MCP meluncurkan server stdio:
+
+* Direktori kerja untuk server yang diluncurkan melalui konfigurasi klien mungkin adalah
+  tidak terdefinisi (seperti `/` di macOS) karena klien dapat dimulai dari
+  di mana saja
+* Selalu gunakan jalur absolut dalam file konfigurasi dan `.env` Anda untuk memastikan
+  pengoperasian yang andal
+* Untuk menguji server secara langsung melalui baris perintah, direktori kerja akan menjadi
+  di mana Anda menjalankan perintah
+
+Misalnya, di `claude_desktop_config.json`, gunakan:
+
+```tema json={null}
+{
+  "mcpServers": {
+    "sistem berkas": {
+      "perintah": "npx",
+      "argumen": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Pengguna/nama pengguna/data"
+      ]
+    }
+  }
+}
+```
+
+Alih-alih jalur relatif seperti `./data`
+
+### Variabel lingkungan
+
+Server MCP yang diluncurkan melalui stdio hanya mewarisi sebagian kecil dari lingkungan tersebut.
+variabel secara otomatis (kumpulan pastinya bergantung pada platform).
+
+Untuk mengganti variabel default atau menyediakan variabel Anda sendiri, Anda dapat menentukan sebuah
+Kunci `env` di `claude_desktop_config.json`:
+
+```tema json={null}
+{
+  "mcpServers": {
+    "server saya": {
+      "perintah": "mcp-server-myapp",
+      "lingkungan": {
+        "MYAPP_API_KEY": "some_key"
+      }
+    }
+  }
+}
+```
+
+### Memulai server
+
+Masalah umum saat memulai startup:
+
+1. **Masalah Jalur**
+   * Jalur eksekusi server tidak tepat
+   * File yang dibutuhkan hilang
+   * Masalah izin
+   * Coba gunakan jalur absolut untuk `command`
+
+2. **Kesalahan Konfigurasi**
+   * Sintaks JSON tidak valid
+   * Kolom yang wajib diisi belum terisi
+   * Ketidaksesuaian tipe
+
+3. **Masalah Lingkungan**
+   * Variabel lingkungan hilang
+   * Nilai variabel tidak tepat
+   * Pembatasan izin
+
+### Masalah koneksi
+
+Saat server gagal terhubung:
+
+1. Periksa log klien
+2. Verifikasi apakah proses server sedang berjalan
+3. Uji secara mandiri dengan [Inspector](/docs/2026-07-28/tools/inspector)
+4. Verifikasi
+   [kompatibilitas protokol](/docs/2026-07-28/learn/versioning#negotiation): panggil
+   [`server/discover`](/specification/2026-07-28/server/discover) untuk melihat yang mana
+   Versi protokol yang didukung server. Sebuah
+   `UnsupportedProtocolVersionError` (`-32022`) mencantumkan versi protokol yang didukung oleh server.
+   versi di kolom `data`-nya
+5. Periksa
+   [kolom `_meta` per permintaan](/spesifikasi/2026-07-28/dasar/indeks#meta):
+   setiap permintaan harus menyertakan `io.modelcontextprotocol/protocolVersion` dan
+   `io.modelcontextprotocol/clientCapabilities`, dan klien juga harus
+   sertakan `io.modelcontextprotocol/clientInfo`. Permintaan yang hilang salah satu dari keduanya
+   Kolom yang wajib diisi ditolak dengan kesalahan `-32602` (Parameter tidak valid), sama seperti sebelumnya.
+   kode yang dikembalikan untuk banyak input yang salah format lainnya. Jika server membutuhkan
+   kemampuan yang tidak dideklarasikan oleh `clientCapabilities` pada permintaan tersebut, seperti
+   [elicitation](/specification/2026-07-28/client/elicitation), ini mengembalikan sebuah
+   `MissingRequiredClientCapabilityError` (`-32021`) menyebutkan yang hilang
+   kemampuan. Periksa `_meta` permintaan dan
+   [`server/discover`](/spesifikasi/2026-07-28/server/discover) menanggapi
+   pastikan kedua belah pihak menyatakan apa yang Anda harapkan
+
+## Debugging di Claude Desktop
+
+Claude Desktop adalah salah satu dari banyak klien MCP. Aplikasi ini tersedia di...
+macOS, Windows, dan Linux.
+
+### Memeriksa status server
+
+Klik ikon plus "Tambahkan file, konektor, dan lainnya" di kolom input obrolan, lalu
+Arahkan kursor ke menu **Konektor** untuk melihat server yang terhubung dan yang tersedia.
+peralatan.
+
+<img src="https://mintcdn.com/mcp/zNouQwo2h8cbxlDS/images/available-mcp-tools.png?fit=max&auto=format&n=zNouQwo2h8cbxlDS&q=85&s=e2ace1ac88895a5fe30ebd8d01456bc3" alt="Alat MCP yang Tersedia" width="437" height="244" data-path="images/available-mcp-tools.png" />
+
+### Melihat log
+
+File log ditulis ke:
+
+* macOS: `~/Library/Logs/Claude`
+* Windows: `%APPDATA%\Claude\logs`
+
+<CodeGroup>
+  ```bash macOS theme={null}
+  tail -n 20 -F ~/Library/Logs/Claude/mcp*.log
+  ```
+
+  ```powershell Windows theme={null}
+  ketik "$env:AppData\Claude\logs\mcp*.log"
+  ```
+</CodeGroup>
+
+Catatan log tersebut mencakup:
+
+* Peristiwa koneksi server
+* Masalah konfigurasi
+* Kesalahan saat runtime
+* Pertukaran pesan
+
+### Menggunakan Chrome DevTools
+
+Akses alat pengembang Chrome di dalam Claude Desktop untuk melakukan investigasi.
+kesalahan sisi klien:
+
+1. Buat file `developer_settings.json` dengan `allowDevTools` diatur ke true:
+
+<CodeGroup>
+  ```bash macOS theme={null}
+  echo '{"allowDevTools": true}' > ~/Library/Application\ Support/Claude/developer_settings.json
+  ```
+
+  ```powershell Windows theme={null}
+  '{"allowDevTools": true}' | Set-Content "$env:AppData\Claude\developer_settings.json"
+  ```
+</CodeGroup>
+
+2. Buka DevTools: `Command-Option-I` (macOS) atau `Ctrl+Alt+I` (Windows)
+
+Catatan: Anda akan melihat dua jendela DevTools:
+
+* Jendela konten utama
+* Jendela bilah judul aplikasi
+
+Gunakan panel Konsol untuk memeriksa kesalahan di sisi klien.
+
+Gunakan panel Jaringan untuk memeriksa:
+
+* Muatan pesan
+* Pengaturan waktu koneksi
+
+## Alur kerja debugging
+
+### Siklus pengembangan
+
+1. Pengembangan Awal
+   * Gunakan [Inspector](/docs/2026-07-28/tools/inspector) untuk pengujian dasar
+   * Menerapkan fungsi inti
+   * Tambahkan titik pencatatan
+
+2. Pengujian Integrasi
+   * Uji coba di klien MCP target Anda
+   * Pantau log
+   * Periksa penanganan kesalahan
+
+### Pengujian perubahan
+
+Untuk menguji perubahan secara efisien:
+
+* **Perubahan konfigurasi**: Mulai ulang klien MCP
+* **Perubahan kode server**: Mulai ulang klien (untuk Claude Desktop, tutup sepenuhnya)
+  dan buka kembali; menutup jendela saja tidak cukup)
+* **Iterasi cepat**: Gunakan [Inspector](/docs/2026-07-28/tools/inspector) selama
+  perkembangan
+
+## Praktik terbaik
+
+### Strategi pencatatan log
+
+1. **Pencatatan Terstruktur**
+   * Gunakan format yang konsisten
+   * Sertakan konteks
+   * Tambahkan stempel waktu
+   * Lacak ID permintaan
+
+2. **Penanganan Kesalahan**
+   * Catat jejak tumpukan
+   * Sertakan konteks kesalahan
+   * Melacak pola kesalahan
+   * Pantau pemulihan
+
+3. **Pelacakan Kinerja**
+   * Pengaturan waktu operasi log
+   * Memantau penggunaan sumber daya
+   * Lacak ukuran pesan
+   * Mengukur latensi
+
+Pertimbangan keamanan
+
+Saat melakukan debugging:
+
+1. **Data Sensitif**
+   * Bersihkan kayu gelondongan
+   * Lindungi kredensial
+   * Sembunyikan informasi pribadi
+
+2. **Kontrol Akses**
+   * Verifikasi izin
+   * Periksa autentikasi
+   * Memantau pola akses
+
+Untuk penjelasan lengkap mengenai vektor serangan dan mitigasi MCP, lihat
+[Praktik Terbaik Keamanan](/docs/2026-07-28/tutorials/security/security_best_practices).
+
+## Mendapatkan bantuan
+
+Saat menghadapi masalah:
+
+1. **Langkah Awal**
+   * Periksa log server
+   * Uji dengan [Inspector](/docs/2026-07-28/tools/inspector)
+   * Tinjau konfigurasi
+   * Verifikasi lingkungan
+
+2. **Saluran Dukungan**
+   * [Masalah GitHub](https://github.com/modelcontextprotocol/modelcontextprotocol/issues)
+   * [Diskusi GitHub](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions)
+
+3. **Memberikan Informasi**
+   * Cuplikan log
+   * File konfigurasi
+   * Langkah-langkah untuk mereproduksi
+   * Detail lingkungan
+
+## Langkah selanjutnya
+
+<CardGroup cols={2}>
+  <Card title="MCP Inspector" icon="magnifying-glass" href="/docs/2026-07-28/tools/inspector">
+    Pelajari cara menggunakan MCP Inspector.
+  </Card>
+
+  <Card title="Membangun server MCP" icon="code" href="/docs/2026-07-28/develop/build-server">
+    Panduan langkah demi langkah membangun server dari awal.
+  </Card>
+
+  <Card title="Hubungkan server lokal" icon="plug" href="/docs/2026-07-28/develop/connect-local-servers">
+    Referensi lengkap dan pemecahan masalah untuk claude_desktop_config.json
+  </Card>
+</GrupKartu>
