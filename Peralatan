@@ -1,0 +1,614 @@
+> ## Indeks Dokumentasi
+> Dapatkan indeks dokumentasi lengkap di: https://modelcontextprotocol.io/llms.txt
+Gunakan berkas ini untuk menemukan semua halaman yang tersedia sebelum menjelajahi lebih lanjut.
+
+# Peralatan
+
+<div id="enable-section-numbers" />
+
+Protokol Konteks Model (MCP) memungkinkan server untuk mengekspos alat yang dapat dipanggil oleh
+Model bahasa. Alat-alat memungkinkan model untuk berinteraksi dengan sistem eksternal, seperti melakukan kueri.
+basis data, memanggil API, atau melakukan komputasi. Setiap alat diidentifikasi secara unik oleh
+sebuah nama dan menyertakan metadata yang menjelaskan skemanya.
+
+<Catatan>
+  Untuk mempersingkat penjelasan, contoh permintaan pada halaman ini menghilangkan permintaan `_meta`.
+  metadata (`io.modelcontextprotocol/protocolVersion`,
+  `io.modelcontextprotocol/clientInfo`, dan
+  `io.modelcontextprotocol/clientCapabilities`). Setiap permintaan **HARUS** menyertakan
+  kolom `_meta` yang diperlukan; lihat
+  [`_meta`](/spesifikasi/2026-07-28/dasar/indeks#meta).
+</Catatan>
+
+## Model Interaksi Pengguna
+
+Alat-alat di MCP dirancang agar **dikendalikan oleh model**, artinya model bahasa dapat
+menemukan dan memanggil alat secara otomatis berdasarkan pemahaman kontekstualnya dan
+perintah pengguna.
+
+Namun, implementasi bebas untuk mengekspos alat melalui pola antarmuka apa pun yang
+sesuai dengan kebutuhan mereka—protokol itu sendiri tidak mewajibkan pengguna tertentu.
+model interaksi.
+
+<Peringatan>
+  Demi kepercayaan, keselamatan, dan keamanan, **HARUSNYA** selalu ada
+  Jadilah manusia yang terlibat dengan kemampuan untuk menolak penggunaan alat.
+
+  Aplikasi **SEHARUSNYA**:
+
+  * Sediakan antarmuka pengguna (UI) yang menjelaskan dengan jelas alat mana yang diekspos ke model AI.
+  * Sisipkan indikator visual yang jelas saat alat diaktifkan.
+  * Tampilkan permintaan konfirmasi kepada pengguna untuk setiap operasi, untuk memastikan bahwa ada campur tangan manusia dalam proses tersebut.
+    lingkaran
+</Peringatan>
+
+## Kemampuan
+
+Server yang mendukung alat **WAJIB** mendeklarasikan kemampuan `tools`:
+
+```tema json={null}
+{
+  "kemampuan": {
+    "peralatan": {
+      "listChanged": benar
+    }
+  }
+}
+```
+
+`listChanged` menunjukkan apakah server akan mengirimkan notifikasi ketika daftar
+Ketersediaan alat berubah.
+
+Server yang mendeklarasikan kemampuan `tools` **HARUS** menanggapi permintaan `tools/list`.
+dengan seperangkat alat yang saat ini tersedia untuk klien yang meminta. Perangkat ini **MUNGKIN** berupa
+kosong dan **MUNGKIN** berubah seiring waktu (lihat
+[Pemberitahuan Perubahan Daftar](#list-changed-notification)), tetapi **TIDAK BOLEH** bervariasi
+per-koneksi atau sebagai efek samping dari permintaan lain pada koneksi tersebut. Himpunan tersebut
+**MUNGKIN** bervariasi tergantung pada otorisasi yang diberikan pada permintaan — misalnya, pengembalian
+hanya alat yang diizinkan oleh cakupan yang diberikan kepada pemanggil — karena kredensial
+Input per permintaan, bukan status koneksi.
+
+Server **SEHARUSNYA** mengembalikan alat dalam urutan yang pasti (yaitu, urutan yang sama di seluruh server).
+permintaan ketika rangkaian alat yang mendasarinya tidak berubah). Pengurutan deterministik memungkinkan
+klien untuk menyimpan daftar alat secara andal dan meningkatkan tingkat keberhasilan cache LLM saat alat
+termasuk dalam konteks model.
+
+## Pesan Protokol
+
+### Alat Daftar
+
+Untuk mengetahui alat yang tersedia, klien mengirimkan permintaan `tools/list`. Operasi ini mendukung
+[paginasi](/spesifikasi/2026-07-28/server/utilitas/paginasi) dan [penyimpanan cache](/spesifikasi/2026-07-28/server/utilitas/penyimpanan cache).
+
+**Meminta:**
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "metode": "alat/daftar",
+  "parameter": {
+    "kursor": "nilai-kursor-opsional"
+  }
+}
+```
+
+**Tanggapan:**
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "hasil": {
+    "resultType": "complete",
+    "peralatan": [
+      {
+        "nama": "dapatkan_cuaca",
+        "judul": "Penyedia Informasi Cuaca",
+        "deskripsi": "Dapatkan informasi cuaca terkini untuk suatu lokasi",
+        "inputSchema": {
+          "tipe": "objek",
+          "properti": {
+            "lokasi": {
+              "tipe": "string",
+              "deskripsi": "Nama kota atau kode pos"
+            }
+          },
+          "diperlukan": ["lokasi"]
+        },
+        "ikon": [
+          {
+            "src": "https://example.com/weather-icon.png",
+            "mimeType": "gambar/png",
+            "ukuran": ["48x48"]
+          }
+        ]
+      }
+    ],
+    "nextCursor": "kursor halaman berikutnya",
+    "ttlMs": 300000,
+    "cakupan cache": "publik"
+  }
+}
+```
+
+### Alat Panggilan
+
+Untuk memanggil suatu alat, klien mengirimkan permintaan `tools/call`:
+
+**Meminta:**
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "metode": "alat/panggilan",
+  "parameter": {
+    "nama": "dapatkan_cuaca",
+    "argumen": {
+      "lokasi": "New York"
+    }
+  }
+}
+```
+
+**Tanggapan:**
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "hasil": {
+    "resultType": "complete",
+    "isi": [
+      {
+        "tipe": "teks",
+        "teks": "Cuaca terkini di New York:\nSuhu: 72°F\nKondisi: Sebagian berawan"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+### Input yang Diperlukan Hasil Alat
+
+Server **MUNGKIN** merespons `tools/call` dengan [`InputRequiredResult`](/specification/2026-07-28/basic/patterns/mrtr#inputrequiredresult) untuk menunjukkan bahwa input tambahan diperlukan sebelum panggilan alat dapat diselesaikan. Ini mengikuti mekanisme [multi round-trip requests](/specification/2026-07-28/basic/patterns/mrtr#multi-round-trip-requests).
+
+Saat mencoba kembali permintaan dengan respons input, klien menyertakan `inputResponses` dan, jika disediakan oleh server, `requestState` dalam parameter permintaan:
+
+**Input Respons yang Diperlukan:**
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "hasil": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "github_login": {
+        "metode": "pengumpulan/pembuatan",
+        "parameter": {
+          "mode": "bentuk",
+          "pesan": "Silakan berikan nama pengguna GitHub Anda",
+          "requestedSchema": {
+            "tipe": "objek",
+            "properti": {
+              "nama": { "tipe": "string" }
+            },
+            "wajib": ["nama"]
+          }
+        }
+      }
+    },
+    "requestState": "eyJsb2NhdGlvbiI6Ik5ldyBZb3JrIn0..."
+  }
+}
+```
+
+**Coba lagi dengan respons masukan:**
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "metode": "alat/panggilan",
+  "parameter": {
+    "nama": "dapatkan_cuaca",
+    "argumen": {
+      "lokasi": "New York"
+    },
+    "inputResponses": {
+      "github_login": {
+        "tindakan": "terima",
+        "isi": {
+          "nama": "kucing gurita"
+        }
+      }
+    },
+    "requestState": "eyJsb2NhdGlvbiI6Ik5ldyBZb3JrIn0..."
+  }
+}
+```
+
+Perhatikan bahwa `id` JSON-RPC **HARUS** berbeda antara permintaan awal dan percobaan ulang.
+
+### Pemberitahuan Perubahan Daftar
+
+Ketika daftar alat yang tersedia berubah, server yang mendeklarasikan `listChanged` akan berubah.
+Kemampuan **SEHARUSNYA** mengirimkan notifikasi kepada klien yang telah membuka
+[`subscriptions/listen`](/specification/2026-07-28/basic/patterns/subscriptions) stream with
+`toolsListChanged: true`:
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "metode": "notifikasi/alat/daftar_berubah"
+}
+```
+
+## Alur Pesan
+
+```tema putri duyung={null}
+Diagram urutan
+    peserta LLM
+    Peserta Klien
+    Peserta Server
+
+    Catatan tentang Klien, Server: Penemuan
+    Klien->>Server: tools/list
+    Server-->>Klien: Daftar alat
+
+    Catatan untuk Klien, LLM: Pemilihan Alat
+    LLM->>Klien: Pilih alat yang akan digunakan
+
+    Catatan tentang Klien, Server: Pemanggilan
+    Klien->>Server: tools/call
+    Server-->>Klien: Hasil alat
+    Klien->>LLM: Hasil proses
+
+    daftar pilihan Berubah
+      Klien->>Server: langganan/mendengarkan (toolsListChanged: true)
+      Server--)Klien: pemberitahuan/langganan/konfirmasi
+      Catatan tentang Klien, Server: Pembaruan
+      Server--)Klien: pemberitahuan/alat/daftar_berubah
+      Klien->>Server: tools/list
+      Server-->>Klien: Alat yang diperbarui
+    akhir
+```
+
+## Tipe Data
+
+### Alat
+
+Definisi alat mencakup:
+
+* `name`: Pengidentifikasi unik untuk alat tersebut
+* `title`: Nama alat yang mudah dibaca (opsional) untuk keperluan tampilan.
+* `deskripsi`: Deskripsi fungsi yang mudah dibaca manusia
+* `icons`: Array ikon opsional untuk ditampilkan di antarmuka pengguna
+* `inputSchema`: Skema JSON yang mendefinisikan parameter yang diharapkan
+  * Mengikuti [pedoman penggunaan Skema JSON](/specification/2026-07-28/basic#json-schema-usage)
+  * Nilai default adalah 2020-12 jika tidak ada kolom `$schema`.
+  * **HARUS** berupa objek JSON Schema yang valid (bukan `null`)
+  * Untuk alat yang tidak memiliki parameter, gunakan salah satu pendekatan yang valid berikut:
+    * `{ "type": "object", "additionalProperties": false }` - **Disarankan**: secara eksplisit hanya menerima objek kosong
+    * `{ "type": "object" }` - menerima objek apa pun (termasuk yang memiliki properti)
+  * Properti **MUNGKIN** menyertakan anotasi [`x-mcp-header`](#x-mcp-header) untuk mengekspos
+    nilai parameter sebagai header HTTP
+* `outputSchema`: Skema JSON opsional yang mendefinisikan struktur keluaran yang diharapkan
+  * Mengikuti [pedoman penggunaan Skema JSON](/specification/2026-07-28/basic#json-schema-usage)
+  * Nilai default adalah 2020-12 jika tidak ada kolom `$schema`.
+* `annotations`: Properti opsional yang menjelaskan perilaku alat
+
+<Peringatan>
+  Demi kepercayaan, keamanan, dan keselamatan, klien **HARUS** mempertimbangkan anotasi alat untuk
+  tidak dapat dipercaya kecuali jika berasal dari server yang terpercaya.
+</Peringatan>
+
+#### Nama-nama Alat
+
+* Nama alat **SEHARUSNYA** memiliki panjang antara 1 dan 128 karakter (termasuk).
+* Nama alat **SEHARUSNYA** dianggap peka terhadap huruf besar dan kecil.
+* Karakter berikut **SEHARUSNYA** menjadi satu-satunya karakter yang diperbolehkan: huruf ASCII besar dan kecil (AZ, az), angka.
+  (0-9), garis bawah (_), tanda hubung (-), dan titik (.)
+* Nama alat **TIDAK BOLEH** mengandung spasi, koma, atau karakter khusus lainnya.
+* Nama alat **SEHARUSNYA** unik di dalam satu server.
+* Contoh nama alat yang valid:
+  * `getUser`
+  * `DATA_EXPORT_v2`
+  * `admin.tools.list`
+
+<Catatan>
+  Keunikan nama alat dibatasi pada satu server. Klien atau proxy yang
+  Alat agregator dari beberapa server **MUNGKIN** mengalami bentrokan penamaan (untuk
+  contoh, dua server yang masing-masing mengekspos alat `pencarian`) dan **SEHARUSNYA** mengimplementasikan
+  Strategi disambiguasi seperti menambahkan awalan pengidentifikasi server pada nama alat.
+
+  Nama server (dari `serverInfo`) tidak dijamin unik di seluruh
+  server dan **TIDAK SEHARUSNYA** diandalkan untuk disambiguasi.
+</Catatan>
+
+#### header x-mcp
+
+Properti ekstensi `x-mcp-header` memungkinkan server untuk menetapkan alat tertentu.
+parameter yang akan dicerminkan ke dalam header HTTP saat menggunakan
+[Transport HTTP yang dapat di-streaming](/spesifikasi/2026-07-28/dasar/transport/streamable-http#header-kustom-dari-parameter-alat).
+Hal ini memungkinkan perantara jaringan (penyeimbang beban, proksi, WAF) untuk merute dan memproses
+permintaan berdasarkan nilai parameter tanpa mengurai isi permintaan.
+
+Properti `x-mcp-header` ditempatkan langsung di dalam Skema JSON dari properti tersebut.
+akan dicerminkan. Nilainya menentukan bagian nama dari `Mcp-Param-{name}` yang dihasilkan.
+Header HTTP.
+
+**Batasan pada nilai `x-mcp-header`:**
+
+* **TIDAK BOLEH** kosong
+* **HARUS** sesuai dengan sintaks token nama field HTTP (`1*tchar`, [RFC 9110 Bagian 5.1](https://datatracker.ietf.org/doc/html/rfc9110#section-5.1))
+* **TIDAK BOLEH** mengandung karakter kontrol, termasuk carriage return (CR, `\r`) atau
+  baris baru (LF, `\n`)
+* **HARUS** unik dan tidak peka huruf besar/kecil di antara semua nilai `x-mcp-header` dalam
+  `inputSchema`
+* **HARUS** hanya diterapkan pada parameter dengan tipe data primitif (integer, string, boolean).
+  Parameter dengan tipe `number` tidak diizinkan. Nilai integer **HARUS** berada dalam rentang tertentu.
+  rentang aman untuk bilangan bulat yang direpresentasikan menggunakan bilangan floating point presisi ganda IEEE754 (−2<sup>53</sup>+1 hingga 2<sup>53</sup>−1)
+* **HARUS** hanya diterapkan pada properti yang *dapat diakses secara statis* dari skema.
+  akar, sebagaimana didefinisikan dalam
+  [Header Kustom dari Parameter Alat](/spesifikasi/2026-07-28/dasar/transportasi/streamable-http#header-kustom-dari-parameter-alat),
+  yang juga mendefinisikan bagaimana nilai header diekstrak dari argumen panggilan.
+
+Klien yang menggunakan transportasi HTTP Streamable **HARUS** menolak definisi alat apa pun
+Nilai `x-mcp-header` melanggar batasan ini. Penolakan berarti klien **HARUS**
+Kecualikan alat yang tidak valid dari hasil `tools/list`. Klien **HARUS** mencatatnya.
+peringatan saat menolak definisi alat, termasuk nama alat dan alasannya
+penolakan. Hal ini memastikan bahwa satu definisi alat yang salah bentuk tidak menghalangi alat lainnya.
+mencegah penggunaan alat yang valid. Klien yang menggunakan transport lain (misalnya, stdio) **MUNGKIN** mengabaikannya.
+Seluruh anotasi `x-mcp-header`.
+
+**Contoh definisi alat dengan `x-mcp-header`:**
+
+```tema json={null}
+{
+  "nama": "eksekusi_sql",
+  "deskripsi": "Eksekusi SQL di Google Cloud Spanner",
+  "inputSchema": {
+    "tipe": "objek",
+    "properti": {
+      "wilayah": {
+        "tipe": "string",
+        "deskripsi": "Wilayah tempat kueri akan dieksekusi",
+        "x-mcp-header": "Wilayah"
+      },
+      "pertanyaan": {
+        "tipe": "string",
+        "deskripsi": "Kueri SQL yang akan dieksekusi"
+      }
+    },
+    "wajib": ["wilayah", "kueri"]
+  }
+}
+```
+
+Dalam contoh ini, ketika alat dipanggil dengan `"region": "us-west1"`, klien menambahkan
+Tambahkan header `Mcp-Param-Region: us-west1` ke permintaan HTTP.
+
+<Peringatan>
+  Pengembang server **TIDAK BOLEH** menandai parameter sensitif (kata sandi, kunci API, token,
+  PII) dengan `x-mcp-header`, karena nilai header terlihat oleh perantara jaringan.
+</Peringatan>
+
+### Hasil Alat
+
+Hasil alat ini mungkin berisi konten [**terstruktur**](#structured-content) atau **tidak terstruktur**.
+
+Konten **tidak terstruktur** dikembalikan dalam bidang `content` dari hasil, dan dapat berisi beberapa item konten dengan tipe yang berbeda:
+
+<Catatan>
+  Semua jenis konten (teks, gambar, audio, tautan sumber daya, dan sumber daya yang disematkan)
+  dukungan opsional
+  [anotasi](/spesifikasi/2026-07-28/server/sumber daya#anotasi) yang
+  Berikan metadata tentang audiens, prioritas, dan waktu modifikasi. Ini adalah
+  Format anotasi yang sama digunakan oleh sumber daya dan petunjuk.
+</Catatan>
+
+#### Isi Teks
+
+```tema json={null}
+{
+  "tipe": "teks",
+  "teks": "Teks hasil alat"
+}
+```
+
+#### Konten Gambar
+
+```tema json={null}
+{
+  "tipe": "gambar",
+  "data": "data yang dikodekan base64",
+  "mimeType": "gambar/png",
+  "anotasi": {
+    “audiens”: [“pengguna”],
+    "prioritas": 0,9
+  }
+}
+```
+
+#### Konten Audio
+
+```tema json={null}
+{
+  "tipe": "audio",
+  "data": "data audio yang dikodekan base64",
+  "mimeType": "audio/wav"
+}
+```
+
+#### Tautan Sumber Daya
+
+Alat ini **MUNGKIN** akan mengembalikan tautan ke [Sumber Daya](/spesifikasi/2026-07-28/server/resources), untuk memberikan konteks tambahan.
+atau data. Dalam hal ini, alat tersebut akan mengembalikan URI yang dapat di-subscribe atau diambil oleh klien:
+
+```tema json={null}
+{
+  "tipe": "tautan_sumber_daya",
+  "uri": "file:///project/src/main.rs",
+  "nama": "main.rs",
+  "deskripsi": "Titik masuk aplikasi utama",
+  "mimeType": "text/x-rust"
+}
+```
+
+Tautan sumber daya mendukung [Anotasi sumber daya](/spesifikasi/2026-07-28/server/resources#annotations) yang sama seperti sumber daya biasa untuk membantu klien memahami cara menggunakannya.
+
+<Info>
+  Tautan sumber daya yang dikembalikan oleh alat tidak dijamin akan muncul dalam hasil.
+  dari permintaan `resources/list`.
+</Info>
+
+#### Sumber Daya Tertanam
+
+[Sumber daya](/spesifikasi/2026-07-28/server/sumber daya) **MUNGKIN** disematkan untuk memberikan konteks tambahan
+atau data menggunakan skema URI yang sesuai (./resources#common-uri-schemes). Server yang menggunakan sumber daya tertanam **HARUSNYA** mengimplementasikan kemampuan `resources`:
+
+```tema json={null}
+{
+  "tipe": "sumber daya",
+  "sumber daya": {
+    "uri": "file:///project/src/main.rs",
+    "mimeType": "text/x-rust",
+    "teks": "fn main() {\n println!(\"Halo dunia!\");\n}",
+    "anotasi": {
+      "audiens": ["pengguna", "asisten"],
+      "prioritas": 0,7,
+      "lastModified": "2025-05-03T14:30:00Z"
+    }
+  }
+}
+```
+
+Sumber daya yang disematkan mendukung [Anotasi sumber daya](/spesifikasi/2026-07-28/server/resources#annotations) yang sama seperti sumber daya biasa untuk membantu klien memahami cara menggunakannya.
+
+#### Konten Terstruktur
+
+Konten **terstruktur** dikembalikan sebagai nilai JSON di bidang `structuredContent` dari sebuah hasil. Ini bisa berupa nilai JSON apa pun (objek, array, string, angka, boolean, atau null) yang sesuai dengan `outputSchema` alat tersebut jika ada yang didefinisikan.
+
+Untuk kompatibilitas mundur, alat yang mengembalikan konten terstruktur SEHARUSNYA juga mengembalikan JSON yang diserialisasi dalam blok TextContent.
+
+<Catatan>
+  `structuredContent` adalah data hasil yang dihasilkan oleh server dan tidak terkait dengan LLM.
+  "output terstruktur" (pembuatan model yang dibatasi skema).
+</Catatan>
+
+#### Skema Keluaran
+
+Alat-alat tersebut juga dapat menyediakan skema keluaran untuk validasi hasil terstruktur.
+Jika skema keluaran disediakan:
+
+* Server **WAJIB** menyediakan hasil terstruktur yang sesuai dengan skema ini.
+* Klien **HARUS** memvalidasi hasil terstruktur terhadap skema ini.
+
+Contoh alat dengan skema keluaran:
+
+```tema json={null}
+{
+  "nama": "mendapatkan_data_cuaca",
+  "judul": "Pengambil Data Cuaca",
+  "deskripsi": "Dapatkan data cuaca terkini untuk suatu lokasi",
+  "inputSchema": {
+    "tipe": "objek",
+    "properti": {
+      "lokasi": {
+        "tipe": "string",
+        "deskripsi": "Nama kota atau kode pos"
+      }
+    },
+    "diperlukan": ["lokasi"]
+  },
+  "skema keluaran": {
+    "tipe": "objek",
+    "properti": {
+      "suhu": {
+        "tipe": "nomor",
+        "deskripsi": "Suhu dalam derajat Celcius"
+      },
+      "kondisi": {
+        "tipe": "string",
+        "deskripsi": "Deskripsi kondisi cuaca"
+      },
+      "kelembapan": {
+        "tipe": "nomor",
+        "deskripsi": "Persentase kelembapan"
+      }
+    },
+    "diperlukan": ["suhu", "kondisi", "kelembapan"]
+  }
+}
+```
+
+Contoh respons yang valid untuk alat ini:
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "hasil": {
+    "resultType": "complete",
+    "isi": [
+      {
+        "tipe": "teks",
+        "teks": "{\"suhu\": 22,5, \"kondisi\": \"Sebagian berawan\", \"kelembapan\": 65}"
+      }
+    ],
+    "Konten terstruktur": {
+      "suhu": 22,5,
+      "kondisi": "Sebagian berawan",
+      "kelembapan": 65
+    }
+  }
+}
+```
+
+Contoh alat dengan skema keluaran array:
+
+```tema json={null}
+{
+  "nama": "daftar_pengguna",
+  "judul": "Daftar Pengguna",
+  "deskripsi": "Mengembalikan daftar semua pengguna",
+  "inputSchema": {
+    "tipe": "objek",
+    "properti": {}
+  },
+  "skema keluaran": {
+    "tipe": "array",
+    "barang": {
+      "tipe": "objek",
+      "properti": {
+        "id": { "tipe": "string" },
+        "nama": { "tipe": "string" },
+        "email": { "tipe": "string" }
+      },
+      "wajib": ["id", "nama", "email"]
+    }
+  }
+}
+```
+
+Contoh respons yang valid untuk alat dengan keluaran berupa array:
+
+```tema json={null}
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "hasil": {
+    "resultType": "complete",
+    "isi": [
+      {
+        "tipe": "teks",
+        "teks": "Ditemukan 2 pengguna: Alice (alice@example.com) dan Bob (bob@example.com)."
+      }
+    ],
+    "Konten terstruktur": [
+      { "id": "1", "name": "Alice", "email": "alice@example.com" },
+      { "id": "2", "name": "Bob", "email": "bob@example.com" }
