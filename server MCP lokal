@@ -1,0 +1,287 @@
+> ## Indeks Dokumentasi
+> Dapatkan indeks dokumentasi lengkap di: https://modelcontextprotocol.io/llms.txt
+Gunakan berkas ini untuk menemukan semua halaman yang tersedia sebelum menjelajahi lebih lanjut.
+
+# Terhubung ke server MCP lokal
+
+Pelajari cara memperluas Claude Desktop dengan server MCP lokal untuk mengaktifkan akses sistem file dan integrasi canggih lainnya.
+
+Server Model Context Protocol (MCP) memperluas kemampuan aplikasi AI dengan menyediakan akses yang aman dan terkontrol ke sumber daya dan alat lokal. Banyak klien mendukung MCP, memungkinkan beragam kemungkinan integrasi di berbagai platform dan aplikasi.
+
+Panduan ini menunjukkan cara terhubung ke server MCP lokal menggunakan Claude Desktop sebagai contoh, salah satu dari banyak klien yang mendukung MCP. Meskipun kami berfokus pada implementasi Claude Desktop, konsep-konsepnya berlaku secara luas untuk klien lain yang kompatibel dengan MCP. Pada akhir tutorial ini, Claude akan dapat berinteraksi dengan file di komputer Anda, membuat dokumen baru, mengatur folder, dan mencari melalui sistem file Anda—semuanya dengan izin eksplisit Anda untuk setiap tindakan.
+
+<Bingkai>
+  <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/quickstart-filesystem.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=629d7e754dc358d71a408d6ce970c1b1" alt="Desktop Claude dengan integrasi sistem file yang menunjukkan kemampuan manajemen file" width="1732" height="2060" data-path="images/quickstart-filesystem.png" />
+</Frame>
+
+## Prasyarat
+
+Sebelum memulai tutorial ini, pastikan Anda telah menginstal hal-hal berikut di sistem Anda:
+
+### Claude Desktop
+
+Unduh dan instal [Claude Desktop](https://claude.ai/download) untuk sistem operasi Anda. Claude Desktop tersedia untuk macOS, Windows, dan Linux.
+
+Jika Anda sudah menginstal Claude Desktop, pastikan Anda menggunakan versi terbaru dengan mengklik menu Claude dan memilih "Periksa Pembaruan...".
+
+### Node.js
+
+Filesystem Server dan banyak server MCP lainnya memerlukan Node.js untuk dijalankan. Verifikasi instalasi Node.js Anda dengan membuka terminal atau command prompt dan menjalankan perintah berikut:
+
+```bash theme={null}
+node --versi
+```
+
+Jika Node.js belum terinstal, unduh dari [nodejs.org](https://nodejs.org/). Kami merekomendasikan versi LTS (Long Term Support) untuk stabilitas.
+
+## Memahami Server MCP
+
+Server MCP adalah program yang berjalan di komputer Anda dan menyediakan kemampuan khusus untuk Claude Desktop melalui protokol standar. Setiap server menyediakan alat yang dapat digunakan Claude untuk melakukan tindakan, dengan persetujuan Anda. Server Sistem File yang akan kita instal menyediakan alat untuk:
+
+* Membaca isi file dan struktur direktori
+* Membuat file dan direktori baru
+* Memindahkan dan mengganti nama file
+* Mencari file berdasarkan nama atau isi
+
+Semua tindakan memerlukan persetujuan eksplisit Anda sebelum dieksekusi, memastikan Anda tetap memiliki kendali penuh atas apa yang dapat diakses dan dimodifikasi oleh Claude.
+
+## Menginstal Server Sistem Berkas
+
+Proses ini melibatkan konfigurasi Claude Desktop agar secara otomatis memulai Filesystem Server setiap kali Anda meluncurkan aplikasi. Konfigurasi ini dilakukan melalui file JSON yang memberi tahu Claude Desktop server mana yang harus dijalankan dan bagaimana cara terhubung ke server tersebut.
+
+<Langkah-langkah>
+  <Judul Langkah="Buka Pengaturan Desktop Claude">
+    Mulailah dengan mengakses pengaturan Claude Desktop. Klik menu Claude di bilah menu sistem Anda (bukan pengaturan di dalam jendela Claude itu sendiri) dan pilih "Pengaturan...".
+
+    Di macOS, ini muncul di bilah menu atas:
+
+    <Frame style={{ textAlign: "center" }}>
+      <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/quickstart-menu.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=0c8b57e0e17af3624b6762a3ea944c8e" width="400" alt="Menu Desktop Claude menampilkan opsi Pengaturan" data-path="images/quickstart-menu.png" />
+    </Frame>
+
+    Ini akan membuka jendela konfigurasi Claude Desktop, yang terpisah dari pengaturan akun Claude Anda.
+  </Langkah>
+
+  <Langkah judul="Akses Pengaturan Pengembang">
+    Di jendela Pengaturan, navigasikan ke tab "Pengembang" di bilah sisi kiri. Bagian ini berisi opsi untuk mengkonfigurasi server MCP dan fitur pengembang lainnya.
+
+    Klik tombol "Edit Config" untuk membuka file konfigurasi:
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/quickstart-developer.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=0fb595490a2f9e15c0301e771a57446c" alt="Pengaturan pengembang menampilkan tombol Edit Konfigurasi" width="1688" height="534" data-path="images/quickstart-developer.png" />
+    </Frame>
+
+    Tindakan ini membuat file konfigurasi baru jika belum ada, atau membuka konfigurasi yang sudah ada. File tersebut terletak di:
+
+    * **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+    * **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+  </Langkah>
+
+  <Judul Langkah="Konfigurasi Server Sistem Berkas">
+    Ganti isi file konfigurasi dengan struktur JSON berikut. Konfigurasi ini memberi tahu Claude Desktop untuk memulai Server Sistem File dengan akses ke direktori tertentu:
+
+    <CodeGroup>
+      ```json macOS theme={null}
+      {
+        "mcpServers": {
+          "sistem berkas": {
+            "perintah": "npx",
+            "argumen": [
+              "-y",
+              "@modelcontextprotocol/server-filesystem",
+              "/Users/username/Desktop",
+              "/Pengguna/nama pengguna/Unduhan"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows theme={null}
+      {
+        "mcpServers": {
+          "sistem berkas": {
+            "perintah": "npx",
+            "argumen": [
+              "-y",
+              "@modelcontextprotocol/server-filesystem",
+              "C:\\Users\\username\\Desktop",
+              "C:\\Users\\username\\Downloads"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    Ganti `username` dengan nama pengguna komputer Anda yang sebenarnya. Jalur yang tercantum dalam larik `args` menentukan direktori mana yang dapat diakses oleh Server Sistem File. Anda dapat memodifikasi jalur ini atau menambahkan direktori tambahan sesuai kebutuhan.
+
+    <Tips>
+      **Memahami Konfigurasi**
+
+      * `"filesystem"`: Nama yang mudah diingat untuk server yang muncul di Claude Desktop
+      * `"command": "npx"`: Menggunakan alat npx Node.js untuk menjalankan server
+      * `"-y"`: Secara otomatis mengkonfirmasi instalasi paket server
+      * `"@modelcontextprotocol/server-filesystem"`: Nama paket Server Sistem Berkas
+      * Argumen yang tersisa: Direktori yang diizinkan untuk diakses oleh server
+    </Tip>
+
+    <Peringatan>
+      **Pertimbangan Keamanan**
+
+      Hanya berikan akses ke direktori yang Anda rasa aman untuk dibaca dan dimodifikasi oleh Claude. Server berjalan dengan izin akun pengguna Anda, sehingga dapat melakukan operasi file apa pun yang dapat Anda lakukan secara manual.
+    </Peringatan>
+  </Langkah>
+
+  <Judul Langkah="Mulai Ulang Claude Desktop">
+    Setelah menyimpan file konfigurasi, tutup sepenuhnya Claude Desktop dan mulai ulang. Aplikasi perlu dihidupkan ulang untuk memuat konfigurasi baru dan memulai server MCP.
+
+    Setelah berhasil memulai ulang, klik indikator "Tambahkan file, konektor, dan lainnya /" <img src="https://mintcdn.com/mcp/cpXzQjUOzyH0mCNH/images/claude-add-files-connectors-and-more.png?fit=max&auto=format&n=cpXzQjUOzyH0mCNH&q=85&s=53acf21f6807dd5323b70b84b5d98d8a" style={{display: 'inline', margin: 0, height: '1.3em', width: 'auto'}} width="33" height="33" data-path="images/claude-add-files-connectors-and-more.png" /> di pojok kiri bawah kotak input percakapan:
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/akpggzunDlIcY2im/images/quickstart-slider.png?fit=max&auto=format&n=akpggzunDlIcY2im&q=85&s=a1ebd4259cff2a7472171885f2edc035" alt="Antarmuka Desktop Claude menampilkan indikator server MCP" width="1414" height="410" data-path="images/quickstart-slider.png" />
+    </Frame>
+
+    Klik indikator ini, lalu arahkan mouse ke "Konektor" dan klik "Kelola konektor". Pilih "filesystem" dari daftar konektor untuk melihat alat yang tersedia di Filesystem Server:
+
+    <Frame style={{ textAlign: "center" }}>
+      <img src="https://mintcdn.com/mcp/cpXzQjUOzyH0mCNH/images/quickstart-tools.png?fit=max&auto=format&n=cpXzQjUOzyH0mCNH&q=85&s=212a63d76daba170d52db0d2f6f582be" width="400" alt="Alat sistem file yang tersedia di Claude Desktop" data-path="images/quickstart-tools.png" />
+    </Frame>
+
+    Jika Server Sistem Berkas tidak terhubung, lihat bagian [Penyelesaian Masalah](#troubleshooting) untuk langkah-langkah debugging.
+  </Langkah>
+</Langkah>
+
+## Menggunakan Server Sistem Berkas
+
+Setelah Filesystem Server terhubung, Claude sekarang dapat berinteraksi dengan sistem file Anda. Cobalah contoh permintaan berikut untuk menjelajahi kemampuannya:
+
+### Contoh Manajemen File
+
+* **"Bisakah kamu menulis puisi dan menyimpannya ke desktopku?"** - Claude akan membuat puisi dan membuat file teks baru di desktopmu.
+* **"Berkas terkait pekerjaan apa saja yang ada di folder unduhan saya?"** - Claude akan memindai unduhan Anda dan mengidentifikasi dokumen terkait pekerjaan.
+* **"Mohon atur semua gambar di desktop saya ke dalam folder baru bernama 'Gambar'"** - Claude akan membuat folder dan memindahkan file gambar ke dalamnya
+
+### Cara Kerja Persetujuan
+
+Sebelum menjalankan operasi sistem file apa pun, Claude akan meminta persetujuan Anda. Ini memastikan Anda tetap memegang kendali atas semua tindakan:
+
+<Frame style={{ textAlign: "center" }}>
+  <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/quickstart-approve.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=98cc6e9dfe885fbd6e9bfae40601e494" width="500" alt="Claude meminta persetujuan untuk melakukan operasi file" data-path="images/quickstart-approve.png" />
+</Frame>
+
+Tinjau setiap permintaan dengan cermat sebelum menyetujuinya. Anda selalu dapat menolak permintaan jika Anda merasa tidak nyaman dengan tindakan yang diusulkan.
+
+## Pemecahan Masalah
+
+Jika Anda mengalami masalah saat menyiapkan atau menggunakan Server Sistem File, solusi-solusi berikut dapat mengatasi masalah umum:
+
+<Grup Akordeon>
+  <Accordion title="Server tidak muncul di Claude / ikon palu hilang">
+    1. Mulai ulang Claude Desktop sepenuhnya.
+    2. Periksa sintaks file `claude_desktop_config.json` Anda.
+    3. Pastikan jalur file yang disertakan dalam `claude_desktop_config.json` valid dan berupa jalur absolut, bukan relatif.
+    4. Lihat [log](#getting-logs-from-claude-for-desktop) untuk mengetahui mengapa server tidak terhubung.
+    5. Di baris perintah Anda, coba jalankan server secara manual (ganti `username` seperti yang Anda lakukan di `claude_desktop_config.json`) untuk melihat apakah Anda mendapatkan kesalahan:
+
+    <CodeGroup>
+      ```bash macOS/Linux theme={null}
+      npx -y @modelcontextprotocol/server-filesystem /Users/username/Desktop /Users/username/Downloads
+      ```
+
+      ```powershell Windows theme={null}
+      npx -y @modelcontextprotocol/server-filesystem C:\Users\username\Desktop C:\Users\username\Downloads
+      ```
+    </CodeGroup>
+  </Akordeon>
+
+  <Accordion title="Mendapatkan log dari Claude Desktop">
+    Pencatatan log Claude.app yang terkait dengan MCP ditulis ke file log di:
+
+    * macOS: `~/Library/Logs/Claude`
+
+    * Windows: `%APPDATA%\Claude\logs`
+
+    * `mcp.log` akan berisi pencatatan umum tentang koneksi MCP dan kegagalan koneksi.
+
+    * File bernama `mcp-server-SERVERNAME.log` akan berisi output stderr dari server yang disebutkan namanya. Server Stdio mungkin menggunakan stderr untuk semua pencatatan log mereka, jadi file-file ini tidak terbatas pada kesalahan saja.
+
+    Anda dapat menjalankan perintah berikut untuk melihat daftar log terbaru dan mengikuti log baru yang muncul (pada Windows, hanya log terbaru yang akan ditampilkan):
+
+    <CodeGroup>
+      ```bash macOS/Linux theme={null}
+      tail -n 20 -f ~/Library/Logs/Claude/mcp*.log
+      ```
+
+      ```powershell Windows theme={null}
+      ketik "%APPDATA%\Claude\logs\mcp*.log"
+      ```
+    </CodeGroup>
+  </Akordeon>
+
+  <Accordion title="Panggilan alat gagal tanpa pemberitahuan">
+    Jika Claude mencoba menggunakan alat-alat tersebut tetapi gagal:
+
+    1. Periksa log Claude untuk mencari kesalahan.
+    2. Verifikasi bahwa server Anda berhasil dibangun dan dijalankan tanpa kesalahan.
+    3. Coba mulai ulang Claude Desktop.
+  </Akordeon>
+
+  <Accordion title="Tidak ada yang berhasil. Apa yang harus saya lakukan?">
+    Silakan lihat [panduan debugging](/docs/2026-07-28/tools/debugging) kami untuk alat debugging yang lebih baik dan panduan yang lebih detail.
+  </Akordeon>
+
+  <Accordion title="Kesalahan ENOENT dan `${APPDATA}` di jalur pada Windows">
+    Jika server yang Anda konfigurasi gagal dimuat, dan Anda melihat kesalahan dalam log yang merujuk pada `${APPDATA}` di dalam sebuah path, Anda mungkin perlu menambahkan nilai yang diperluas dari `%APPDATA%` ke kunci `env` Anda di `claude_desktop_config.json`:
+
+    ```tema json={null}
+    {
+      "pencarian berani": {
+        "perintah": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+        "lingkungan": {
+          "APPDATA": "C:\\Users\\user\\AppData\\Roaming\\",
+          "BRAVE_API_KEY": "..."
+        }
+      }
+    }
+    ```
+
+    Setelah perubahan ini diterapkan, jalankan kembali Claude Desktop.
+
+    <Peringatan>
+      **npm harus diinstal secara global**
+
+      Perintah `npx` mungkin akan terus gagal jika Anda belum menginstal npm secara global. Jika npm sudah terinstal secara global, Anda akan menemukan `%APPDATA%\npm` ada di sistem Anda. Jika belum, Anda dapat menginstal npm secara global dengan menjalankan perintah berikut:
+
+      ```bash theme={null}
+      npm install -g npm
+      ```
+    </Peringatan>
+  </Akordeon>
+</AccordionGroup>
+
+## Langkah Selanjutnya
+
+Setelah berhasil menghubungkan Claude Desktop ke server MCP lokal, jelajahi opsi-opsi berikut untuk memperluas pengaturan Anda:
+
+<CardGroup cols={2}>
+  <Card title="Jelajahi server lain" icon="grid" href="https://github.com/modelcontextprotocol/servers">
+    Jelajahi koleksi server MCP resmi dan buatan komunitas kami untuk
+    kemampuan tambahan
+  </Card>
+
+  <Card title="Bangun server Anda sendiri" icon="code" href="/docs/2026-07-28/develop/build-server">
+    Buat server MCP khusus yang disesuaikan dengan alur kerja spesifik Anda dan
+    integrasi
+  </Card>
+
+  <Card title="Hubungkan ke server jarak jauh" icon="cloud" href="/docs/2026-07-28/develop/connect-remote-servers">
+    Pelajari cara menghubungkan Claude ke server MCP jarak jauh untuk alat berbasis cloud dan
+    layanan
+  </Card>
+
+  <Card title="Memahami protokol" icon="book" href="/docs/2026-07-28/learn/architecture">
+    Pelajari lebih dalam cara kerja MCP dan arsitekturnya.
+  </Card>
+</GrupKartu>
