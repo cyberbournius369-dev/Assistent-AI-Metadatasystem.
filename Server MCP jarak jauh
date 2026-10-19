@@ -1,0 +1,129 @@
+> ## Indeks Dokumentasi
+> Dapatkan indeks dokumentasi lengkap di: https://modelcontextprotocol.io/llms.txt
+Gunakan berkas ini untuk menemukan semua halaman yang tersedia sebelum menjelajahi lebih lanjut.
+
+# Terhubung ke Server MCP jarak jauh
+
+Pelajari cara menghubungkan Claude ke server MCP jarak jauh dan perluas kemampuannya dengan alat dan sumber data yang dihosting di internet.
+
+Server MCP jarak jauh memperluas kemampuan aplikasi AI di luar lingkungan lokal Anda, menyediakan akses ke alat, layanan, dan sumber data yang dihosting di internet. Dengan terhubung ke server MCP jarak jauh, Anda mengubah asisten AI dari alat bantu menjadi rekan tim yang berpengetahuan luas dan mampu menangani proyek kompleks dan bertahap dengan akses waktu nyata ke sumber daya eksternal.
+
+Banyak klien sekarang mendukung server MCP jarak jauh, memungkinkan berbagai kemungkinan integrasi. Panduan ini menunjukkan cara terhubung ke server MCP jarak jauh menggunakan [Claude](https://claude.ai/) sebagai contoh, salah satu dari banyak klien yang mendukung MCP. Meskipun kami berfokus pada implementasi Claude melalui Konektor Kustom, konsep-konsepnya berlaku secara luas untuk klien lain yang kompatibel dengan MCP.
+
+## Memahami Server MCP Jarak Jauh
+
+Server MCP jarak jauh berfungsi mirip dengan server MCP lokal tetapi dihosting di internet, bukan di mesin lokal Anda. Server ini menyediakan alat, perintah, dan sumber daya yang dapat digunakan Claude untuk melakukan tugas atas nama Anda. Server ini dapat terintegrasi dengan berbagai layanan seperti alat manajemen proyek, sistem dokumentasi, repositori kode, dan layanan lain yang mendukung API.
+
+Keunggulan utama server MCP jarak jauh adalah aksesibilitasnya. Tidak seperti server lokal yang memerlukan instalasi dan konfigurasi pada setiap perangkat, server jarak jauh tersedia dari klien MCP mana pun yang memiliki koneksi internet. Hal ini menjadikannya ideal untuk aplikasi AI berbasis web, integrasi yang menekankan kemudahan penggunaan, dan layanan yang memerlukan pemrosesan atau otentikasi di sisi server.
+
+## Apa itu Konektor Kustom?
+
+Konektor Kustom berfungsi sebagai jembatan antara Claude dan server MCP jarak jauh. Konektor ini memungkinkan Anda untuk menghubungkan Claude langsung ke alat dan sumber data yang paling penting bagi alur kerja Anda, sehingga Claude dapat beroperasi di dalam perangkat lunak favorit Anda dan mengambil wawasan dari konteks lengkap alat eksternal Anda.
+
+Dengan Konektor Kustom, Anda dapat:
+
+* [Hubungkan Claude ke server MCP jarak jauh yang sudah ada](https://support.anthropic.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp) yang disediakan oleh pengembang pihak ketiga
+* [Buat server MCP jarak jauh Anda sendiri untuk terhubung dengan alat apa pun](/docs/2026-07-28/develop/build-server)
+
+## Menghubungkan ke Server MCP Jarak Jauh
+
+Proses menghubungkan Claude ke server MCP jarak jauh melibatkan penambahan Konektor Kustom melalui [antarmuka Claude](https://claude.ai/). Ini akan membangun koneksi aman antara Claude dan server jarak jauh yang Anda pilih.
+
+<Langkah-langkah>
+  <Judul Langkah="Navigasi ke Pengaturan Konektor">
+    Buka Claude Desktop atau Claude di browser Anda, lalu navigasikan ke halaman pengaturan:
+
+    * **Desktop**: Gunakan pintasan keyboard `Ctrl+Koma` atau klik ikon menu di kiri atas <img src="https://mintcdn.com/mcp/cpXzQjUOzyH0mCNH/images/claude-desktop-hamburger-menu-icon.png?fit=max&auto=format&n=cpXzQjUOzyH0mCNH&q=85&s=66e498f668362c79f829a07b5ce863c8" style={{display: 'inline', margin: 0, height: '1.3em', width: 'auto'}} width="33" height="33" data-path="images/claude-desktop-hamburger-menu-icon.png" />, arahkan kursor ke "File", dan pilih "Settings"
+    * **Browser**: Gunakan pintasan keyboard `⌘⇧` (*macOS*) atau klik ikon profil Anda, lalu pilih "Pengaturan" dari menu.
+
+    Setelah Anda masuk ke halaman pengaturan, klik "Konektor" di bilah sisi. Ini akan menampilkan konektor yang saat ini telah Anda konfigurasi dan menyediakan opsi untuk menambahkan konektor baru.
+  </Langkah>
+
+  <Judul Langkah="Tambahkan Konektor Kustom">
+    Di bagian Konektor, klik tombol "Tambah" di kanan atas jendela, lalu pilih "Tambahkan konektor kustom" dari menu tarik-turun. Ini memulai proses koneksi. Untuk mengikuti langkah-langkahnya, salin/tempel URL di bawah ini:
+
+    ```text Contoh Tema Server Jarak Jauh={null}
+    https://example-server.modelcontextprotocol.io/mcp
+    ```
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/quickstart-remote/1-add-connector.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=b5ae9b23164875bbaa3aff4c178cdc64" alt="Tombol Tambah Konektor Kustom di Pengaturan Claude" width="1038" height="809" data-path="images/quickstart-remote/1-add-connector.png" />
+    </Frame>
+
+    Sebuah dialog akan muncul meminta Anda untuk memasukkan URL server MCP jarak jauh. URL ini harus diberikan oleh pengembang atau administrator server. Masukkan URL lengkap, pastikan URL tersebut menyertakan protokol yang tepat (https://) dan komponen jalur yang diperlukan.
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/quickstart-remote/2-connect.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=0934f16d8e016cade8e560c8f89d011b" alt="Dialog untuk memasukkan URL server MCP jarak jauh" width="1616" height="282" data-path="images/quickstart-remote/2-connect.png" />
+    </Frame>
+
+    Setelah memasukkan URL, klik "Tambah" untuk melanjutkan koneksi.
+  </Langkah>
+
+  <Judul Langkah="Selesaikan Otentikasi">
+    Sebagian besar server MCP jarak jauh memerlukan otentikasi untuk memastikan akses yang aman ke sumber dayanya. Proses otentikasi bervariasi tergantung pada implementasi server, tetapi umumnya melibatkan OAuth, kunci API, atau kombinasi nama pengguna/kata sandi.
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/4ZXF1PrDkEaJvXpn/images/quickstart-remote/3-auth.png?fit=max&auto=format&n=4ZXF1PrDkEaJvXpn&q=85&s=89af6e1b85718637231388697cc7b015" alt="Layar otentikasi untuk server MCP jarak jauh" width="490" height="806" data-path="images/quickstart-remote/3-auth.png" />
+    </Frame>
+
+    Ikuti petunjuk otentikasi yang diberikan oleh server. Ini mungkin akan mengarahkan Anda ke penyedia otentikasi pihak ketiga atau menampilkan formulir di dalam Claude. Setelah otentikasi selesai, Claude akan membuat koneksi aman ke server jarak jauh.
+  </Langkah>
+
+  <Step title="Akses Sumber Daya dan Petunjuk">
+    Setelah koneksi berhasil, sumber daya dan petunjuk server jarak jauh akan tersedia dalam percakapan Claude Anda. Anda dapat mengaksesnya dengan mengklik indikator "Tambahkan file, konektor, dan lainnya /" <img src="https://mintcdn.com/mcp/cpXzQjUOzyH0mCNH/images/claude-add-files-connectors-and-more.png?fit=max&auto=format&n=cpXzQjUOzyH0mCNH&q=85&s=53acf21f6807dd5323b70b84b5d98d8a" style={{display: 'inline', margin: 0, height: '1.3em', width: 'auto'}} width="33" height="33" data-path="images/claude-add-files-connectors-and-more.png" /> di pojok kiri bawah area input pesan. Kemudian arahkan kursor ke "Konektor", pindahkan kursor ke "Tambahkan ke Contoh Server Jarak Jauh", di mana kursor akan menampilkan menu lampiran.
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/cpXzQjUOzyH0mCNH/images/quickstart-remote/4-select-resources-menu.png?fit=max&auto=format&n=cpXzQjUOzyH0mCNH&q=85&s=e5fa85174f8acbadbd709bac66f42d5c" alt="Menu lampiran yang menampilkan sumber daya yang tersedia" width="735" height="378" data-path="images/quickstart-remote/4-select-resources-menu.png" />
+    </Frame>
+
+    Menu ini menampilkan semua sumber daya dan petunjuk yang tersedia dari server yang terhubung dengan Anda. Pilih item yang ingin Anda sertakan dalam percakapan Anda. Sumber daya ini memberi Claude konteks dan informasi dari alat eksternal Anda.
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/cpXzQjUOzyH0mCNH/images/quickstart-remote/5-select-prompts-resources.png?fit=max&auto=format&n=cpXzQjUOzyH0mCNH&q=85&s=68722669d9e18252756885c703e4f221" alt="Memilih sumber daya dan perintah tertentu dari menu" width="648" height="529" data-path="images/quickstart-remote/5-select-prompts-resources.png" />
+    </Frame>
+  </Langkah>
+
+  <Langkah judul="Konfigurasi Izin Alat">
+    Server MCP jarak jauh sering kali mengekspos beberapa alat dengan kemampuan yang berbeda-beda. Anda dapat mengontrol alat mana yang diizinkan Claude untuk digunakan dengan mengkonfigurasi izin di pengaturan konektor. Ini memastikan Claude hanya melakukan tindakan yang telah Anda otorisasi secara eksplisit.
+
+    <Bingkai>
+      <img src="https://mintcdn.com/mcp/cpXzQjUOzyH0mCNH/images/quickstart-remote/6-configure-tools.png?fit=max&auto=format&n=cpXzQjUOzyH0mCNH&q=85&s=5cfd8b2c5d06e7e3699eac24c68d090e" alt="Antarmuka konfigurasi izin alat" width="604" height="745" data-path="images/quickstart-remote/6-configure-tools.png" />
+    </Frame>
+
+    Kembali ke pengaturan Konektor dan klik server yang terhubung. Di sini Anda dapat mengaktifkan atau menonaktifkan alat tertentu, menetapkan batasan penggunaan, dan mengkonfigurasi parameter keamanan lainnya sesuai kebutuhan Anda.
+  </Langkah>
+</Langkah>
+
+## Praktik Terbaik untuk Menggunakan Server MCP Jarak Jauh
+
+Saat bekerja dengan server MCP jarak jauh, pertimbangkan rekomendasi berikut untuk memastikan pengalaman yang aman dan efisien:
+
+**Pertimbangan Keamanan**: Selalu verifikasi keaslian server MCP jarak jauh sebelum terhubung. Hanya terhubung ke server dari sumber tepercaya, dan tinjau izin yang diminta selama otentikasi. Berhati-hatilah dalam memberikan akses ke data atau sistem sensitif.
+
+**Mengelola beberapa konektor**: Anda dapat terhubung ke beberapa server MCP jarak jauh secara bersamaan. Atur konektor Anda berdasarkan tujuan atau proyek untuk menjaga kejelasan. Tinjau dan hapus konektor yang tidak lagi Anda gunakan secara berkala untuk menjaga ruang kerja Anda tetap terorganisasi dan aman.
+
+## Langkah Selanjutnya
+
+Sekarang setelah Anda menghubungkan Claude ke server MCP jarak jauh, Anda dapat menjelajahi kemampuannya dalam percakapan Anda. Cobalah menggunakan alat yang terhubung untuk mengotomatiskan tugas, mengakses data eksternal, atau mengintegrasikannya dengan alur kerja yang sudah ada.
+
+<CardGroup cols={2}>
+  <Card title="Bangun server jarak jauh Anda sendiri" icon="cloud" href="/docs/2026-07-28/develop/build-server">
+    Buat server MCP jarak jauh khusus untuk diintegrasikan dengan alat-alat milik perusahaan dan
+    layanan
+  </Card>
+
+  <Card title="Jelajahi server yang tersedia" icon="grid" href="https://github.com/modelcontextprotocol/servers">
+    Jelajahi koleksi server MCP resmi dan buatan komunitas kami.
+  </Card>
+
+  <Card title="Hubungkan server lokal" icon="komputer" href="/docs/2026-07-28/develop/connect-local-servers">
+    Pelajari cara menghubungkan Claude Desktop ke server MCP lokal untuk akses sistem langsung.
+    mengakses
+  </Card>
+
+  <Card title="Memahami arsitektur" icon="book" href="/docs/2026-07-28/learn/architecture">
+    Pelajari lebih dalam cara kerja MCP dan arsitekturnya.
+  </Card>
+</GrupKartu>
+
+Server MCP jarak jauh membuka kemungkinan yang luar biasa untuk memperluas kemampuan Claude. Seiring Anda terbiasa dengan integrasi ini, Anda akan menemukan cara baru untuk menyederhanakan alur kerja dan menyelesaikan tugas-tugas kompleks dengan lebih efisien.
