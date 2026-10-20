@@ -1,0 +1,67 @@
+# Dialogs
+
+
+
+The method **`FB.ui()`** is used to trigger different forms of Facebook created UI dialogs. These dialogs include:
+
+- The [Share Dialog](https://developers.facebook.com/documentation/sharing/reference/share-dialog) allows someone to post a link or Open Graph story to their profile.
+
+- The [Login Dialog](https://developers.facebook.com/documentation/facebook-login/web) allows someone to use Facebook Login to grant permissions to an app.
+
+- The [Add Page Tab Dialog](https://developers.facebook.com/docs/reference/dialogs/add_to_page) allows someone to add an app to a tab on a Facebook Page which they admin.
+
+- The [Requests Dialog](https://developers.facebook.com/docs/reference/dialogs/requests) allows someone to send a request to one or more of their friends from a game.
+
+- The [Send Dialog](https://developers.facebook.com/documentation/sharing/reference/send-dialog) allows someone to send a Facebook Message to one or more of their friends.
+
+- The [Ads Payments Dialog](https://developers.facebook.com/docs/marketing-api/business-manager-api#paydialog) allows people to add payment methods to their ad account from your app.
+
+- The [Payments Dialog](https://developers.facebook.com/docs/concepts/payments/dialog) allows people to purchase virtual items for your app.
+
+- The [Go Live Dialog](https://developers.facebook.com/documentation/live-video-api/audience-targeting) allows people to broadcast live streaming via Facebook from your app.
+
+- The [Offer Ads Dialog](https://developers.facebook.com/docs/marketing-api/guides/offer-ads#create-offer-dialog) allows someone to create an Offer Ad using Facebook native UI without leaving your app.
+
+- The [Leadgen Dialog](https://developers.facebook.com/documentation/ads-commerce/marketing-api/guides/lead-ads/create#create-leadgen-dialog) allows someone to create a Leadgen Form using Facebook native UI without leaving your app.
+
+- The [Canvas Ads Dialog](https://developers.facebook.com/documentation/ads-commerce/marketing-api/guides/instant-experiences#canvas-ads-dialog) allows someone to create a Canvas Ad using Facebook native UI without leaving your app.
+
+- The [Collection Ads Dialog](https://developers.facebook.com/documentation/ads-commerce/marketing-api/creative/collection-ads#collection-ads-dialog) allows someone to create a Collection Ad using Facebook native UI without leaving your app.
+
+- The [Canvas Preview Dialog](https://developers.facebook.com/documentation/ads-commerce/marketing-api/guides/instant-experiences#canvas-preview-dialog) allows someone to preview a Canvas or Collection Ad as it would be seen by a user on Facebook without leaving your app.
+
+```
+FB.ui(params, function(response))
+```
+
+## Parameters {#parameters}
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `params` | `object` | A collection of parameters that control which dialog is loaded, and relevant settings. Click for more info. |
+| ↳<br>`method` | `enum` | The UI dialog that is being invoked. This is a required field. |
+| ↳<br>`*` | `various` | Each dialog also has it's own set of additional parameters that are added to this `params` object when making the method call. Consult the relevant dialog's own reference doc to see the parameters that can be used. |
+| `function(response)` | `function` | This specifies the function that is called whenever the UI dialog is closed, either by success, cancellation, or errors. The `response` object will depend on the dialog being used. Consult the relevant dialog's own reference doc to see the `response` object that should be returned. Defaults to `null`. |
+
+## Examples {#examples}
+
+Share Dialog posting a link:
+
+```
+FB.ui(
+  {
+    method: 'share',
+    href: 'https://developers.facebook.com/docs/',
+  },
+  // callback
+  function(response) {
+    if (response && !response.error_message) {
+      alert('Posting completed.');
+    } else {
+      alert('Error while posting.');
+    }
+  }
+);
+```
+
+Note that `response.error_message` only appears if someone using your app authenciated it with Facebook login.
