@@ -1,0 +1,123 @@
+# Create an App with Meta
+
+
+
+Creating an app with Meta is a crucial first step for any developer looking to integrate with Meta's products, SDKs, or APIs. This process ensures your app is properly identified, configured, and authorized to interact with Meta's platform and services.
+
+## Before you start
+
+To create an app with Meta, you must first [**register as a developer**](https://developers.facebook.com/documentation/development/register) and be [logged into your developer account](https://facebook.com/).
+
+## Overview
+
+You need to create an app to be able to:
+
+* **Enable Integration:** Gain access to Meta's SDKs and APIs, allowing your app to interact with Facebook, Instagram, and other Meta products.
+* **Manage Permissions and Data Access:** Review and comply with requirements for accessing user data, ensuring your app meets Meta's privacy and security standards.
+* **Obtain Credentials:** Receive a unique App ID and App Secret, which are required for authentication and generating access tokens for testing and production use.
+
+### What are use cases?
+
+**Use cases define the main ways your app will interact with Meta's platform, such as authenticating users, accessing social features, or managing business assets.**
+
+When you add a use case to your app, permissions, features, and products are automatically added to your app that provide the use case's functionality to your app. For example, if you select the **Manage everything on your Page** use case, the `business_management`, `pages_show_list`, and `public_profile` are added. These permissions that are required for this use case to work properly, and can't be removed. Additionally, the `pages_manage_engagement` permission is added by default but it can be removed if your app doesn't need it to function as you want it to. You can also add optional permissions, such as `pages_read_engagement`, and the Business Asset User Profile Access feature if your app needs it to function the way you want it to.
+
+You can add multiple use cases to a single app, provided they are compatible with each other. For example, you can add the **Access Threads API** use case to an app with the **Manage everything on your Page** use case, but you can't add the **Authenticate and request data from users with Facebook Login** use case since it is incompatible. During initial app creation, after you select a use case, ***incompatible use cases are greyed out.***
+
+**Note:** [Facebook Login for Business](https://developers.facebook.com/documentation/facebook-login/facebook-login-for-business) and [Webhooks](https://developers.facebook.com/docs/graph-api/webhooks/getting-started/webhooks-for-ad-accounts) might automatically be added to your app.
+
+Additionally, you can **Create an app without a use case** to obtain an app ID, but this app will not have any permissions, features, or products associated with it.
+
+Once your app has been created, you can customize each use case, and add compatible use cases. If you choose to add additional use cases later, ***only compatible use cases are displayed***.
+
+**Warning:** **Use cases cannot be removed** after you create your app. You can add compatible use cases to an existing app, however, once added, a use case cannot be removed.
+
+### Available use cases
+
+### What are permissions and features?
+
+**Permissions** are how your app asks someone if it can access their data stored on Meta's servers. [Learn more.](https://developers.facebook.com/documentation/facebook-login/guides/permissions)
+
+**Features** are authorization mechanisms that allow your app to access specific endpoints that don’t require explicit consent from your app users in order to access the user’s data for a specific purpose. [Learn more.](https://developers.facebook.com/docs/features-reference)
+
+When customizing a use case, you will see a list of permissions and features that are available for the use case. A use case has permissions that are required for the use case to work proper. These required permission can't be removed. A use case might also have optional permissions that you can add that provide additional functionality. Optional permissions can be added or removed at any time during development. **Only add optional permissions that your app needs in order to work the way you want it to.**
+
+#### Use Case Permission Mapping
+
+The following table shows you the permissions and features that are both required for a particular use case and additional, optional permissions and features that are available for that use case.
+
+### What is a business portfolio?
+
+**A business portfolio allows organizations to bring their Facebook Pages, Instagram accounts, ad accounts, catalogs and other business assets together so you can manage them, and the people who access them, from one place using business tools such as Meta Business Suite and Business Manager.** [Learn more about business portfolios.](https://www.facebook.com/business/help/486932075688253)
+
+If your app will access data that you don't own or manage, you must connect your app to a business portfolio. You can connect a business portfolio at any time during development.
+
+#### What is a verified business?
+
+To access certain products and features, Meta may ask you to verify your business. This process helps us confirm that your business portfolio belongs to a legitimate business or organization. Not all businesses need to or may have the option to complete verification. [Learn more about business verification.](https://www.facebook.com/business/help/1095661473946872)
+
+### What is App Review?
+
+App Review is the process that enables Meta to ensure that apps use Meta APIs, SDKs, and products appropriately. It is required if your app will be used by people without a role on your app or a role on the business that is connected to your app. [Learn more about App Review.](https://developers.facebook.com/documentation/resp-plat-initiatives)
+
+### App creation video
+
+## App creation steps
+
+### Start
+
+1. Navigate to **[https://developers.facebook.com/apps/creation/](https://developers.facebook.com/apps/creation/)** to begin the app creation process.
+
+### App details
+
+1. Enter your **app's name** and a **contact email address**.  
+1. Click **Next**.
+
+### Use cases
+
+1. Select one or more use cases for your app. You can add additional, compatible use cases now or at any time during development.
+* **Incompatible use cases are greyed out.**
+* If you choose to add additional use cases later, only compatible use cases are displayed.
+* Some products, such as [Facebook Login for Business](https://developers.facebook.com/documentation/facebook-login/facebook-login-for-business)  or [Webhooks](https://developers.facebook.com/docs/graph-api/webhooks/getting-started/webhooks-for-ad-accounts), might be automatically included in your use case.
+* If you need a use case not listed, select **Other** and following the instructions in [our Other App Types guide](https://developers.facebook.com/documentation/development/create-an-app/other-app-types).
+1. Click **Next**.
+
+### Business  
+
+1. Select an option:
+* A verified business portfolio
+* An unverified business portfolio
+* **I don't want to connect a business portfolio yet.**
+* **Create a business portfolio**
+        * Add your information in the pop-up.
+        * You can submit your business portfolio for verification now, Meta's Business Manager will open in a new browser window, or later.
+        * When complete, return to the dashboard and select your new business portfolio.
+1. Click **Next**.
+
+### Requirements
+
+Your app might need to complete certain requirements, such as [App Review](https://developers.facebook.com/documentation/resp-plat-initiatives/individual-processes/app-review), to get and maintain data access for your app's use cases.
+
+1. Click **Next**.
+
+### Overview
+
+1. **Review** your app's details, use cases, connected business, and requirements.
+* If you need to make any changes, you can click **App details**, **Use cases**, **Business**, or **Requirements** at the top of the page or the **Previous** button in the lower-right.
+* You can also review the [Meta Platform Terms](https://developers.facebook.com/terms/) and [Developer Policies](https://developers.facebook.com/devpolicy/) by following the links at the bottom of the page.
+
+1. Click **Go to dashboard** to finalized the app creation process.
+
+You are redirected to the dashboard and can now customize each use case you've selected for your app.
+
+## Troubleshooting
+
+If you are unable to create an app, you might have reached the app limit. You are permitted to have a **developer or administrator role on a maximum of 15 apps** that are not already connected to a [Meta Verified Business Account](https://www.facebook.com/business/help/308979828303560). If you have reached the app limit and are unable to create an application or accept a new pending role, take the following steps in the dashboard:
+
+* Connect a [verified business portfolio](https://developers.facebook.com/documentation/development/release/business-verification) to any apps that are not already connected to one.
+* Remove any old or unused apps – Archived apps count towards the app limit; if you no longer require these apps, we suggest removing them.
+* Remove yourself as an administrator or developer from an app.
+
+## Next Steps
+
+**Customize your use cases:** Now that you have created your app, you can [customize your use cases](https://developers.facebook.com/documentation/development/app-customization).
