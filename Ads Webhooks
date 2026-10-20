@@ -1,0 +1,56 @@
+# Ads Webhooks
+
+
+**Ads webhooks push updates to your app the moment something changes in an ad account.** Instead of polling the Marketing API on a schedule to check whether an ad was disapproved, a creative is fatiguing, or a new recommendation is available, you register a callback URL once and Meta sends a notification when the event occurs.
+
+Polling on a fixed schedule is inefficient. It consumes rate limit on requests that usually return no change, and it adds lag between the moment something happens and the moment your app finds out. Webhooks remove both problems: you are notified immediately, and you only call the API when there is something new to read.
+
+## How ads webhooks work
+
+Ads webhooks are delivered on the `ad_account` object. You subscribe your app to one or more `ad_account` fields, then connect the specific ad accounts you manage. From then on, Meta sends an HTTPS `POST` to your callback URL whenever a subscribed field changes on one of those accounts.
+
+A notification tells you that something changed on an ad object. When you receive one, poll the relevant Marketing API endpoint to get the current details and take action. You still read from the API, but only when there is a real change, so you no longer poll blindly on a fixed schedule.
+
+To start receiving webhooks, follow the [Get started](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/setup/get-started) guide.
+
+## Payload envelope
+
+Every ads webhook uses the same envelope. The top-level `object` is always `ad_account`, and `entry` contains one item per affected ad account. Each `entry` includes the ad account ID, a Unix timestamp, and a `changes` array. Each change has a `field` that identifies the webhook and a `value` that describes what changed.
+
+```json
+{
+  "object": "ad_account",
+  "entry": [
+    {
+      "id": "<AD_ACCOUNT_ID>",
+      "time": 1782862117,
+      "changes": [
+        {
+          "field": "<FIELD>",
+          "value": {}
+        }
+      ]
+    }
+  ]
+}
+```
+
+The contents of `value` depend on the webhook. Each webhook page documents the exact payload that webhook sends and the calls to poll for the updated details.
+
+## Available webhooks
+
+| Webhook | Field | What it tells you |
+|---|---|---|
+| [Effective status](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/effective-status) | `effective_status` | An ad object's delivery status changed, such as a rejection, a delivery block, or a return to active delivery. |
+| [Subscriptions](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/subscriptions) | `subscriptions` | An object was created or updated, or an insights metric such as impressions, spend, or conversions crossed a threshold you define. |
+| [Creative fatigue](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/creative-fatigue) | `creative_fatigue` | An ad's creative is fatiguing and may need a refresh to maintain performance. |
+| [Ad recommendations](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/ad-recommendations) | `ad_recommendations` | A new performance recommendation is available for an ad object. |
+| [In-process ad objects](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/in-process-ad-objects) | `in_process_ad_objects` | An ad object finished publishing or processing. |
+| [With-issues ad objects](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/with-issues-ad-objects) | `with_issues_ad_objects` | An ad object entered an issue state during operation or publishing. |
+
+## Next steps
+
+- [Get started](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/setup/get-started) -- Subscribe your app and connect an ad account
+- [Effective status](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/effective-status) -- Track delivery-status changes across campaigns, ad sets, and ads
+- [Creative fatigue](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/creative-fatigue) -- React when a creative starts to fatigue
+- [Ad recommendations](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ads-webhooks/ad-recommendations) -- Apply performance recommendations as they arrive
