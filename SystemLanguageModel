@@ -1,0 +1,248 @@
+# Untuk perizinan, lihat file LICENSE terlampir. 
+# Hak Cipta (C) 2026 Apple Inc. Semua Hak Dilindungi Undang-Undang.
+
+Modul ini 
+menyediakan binding Python inti untuk Foundation Models, termasuk 
+akses dan konfigurasi model dasar sistem.
+
+Kelas utama yang disediakan adalah:
+
+* :class:`SystemLanguageModel` - Antarmuka ke model dasar di perangkat yang digunakan oleh Apple Intelligence 
+* :class:`SystemLanguageModelUseCase` - Enumerasi kasus penggunaan model 
+* :class:`SystemLanguageModelGuardrails` - Enumerasi pengaturan pembatas 
+* :class:`SystemLanguageModelUnavailableReason` - Enumerasi alasan ketidaktersediaan
+
+Contoh: 
+    Penggunaan dasar SystemLanguageModel::
+
+        impor apple_fm_sdk sebagai fm
+
+        model = fm.SystemLanguageModel() 
+        is_available, reason = model.is_available() 
+        if is_available: 
+            # Gunakan model 
+            pass 
+"""
+
+from .c_helpers import ( _ManagedObject , ) from enum import IntEnum from typing import Optional from .errors import FoundationModelsError   
+    
+
+   
+   
+   
+
+impor ctypes dari ctypes impor c_int 
+   
+
+try : 
+    from . import _ctypes_bindings as lib except ImportError : raise ImportError ( "Binding C Foundation Models tidak ditemukan. Pastikan _foundationmodels_ctypes.py tersedia." )     
+ 
+     
+        
+    
+
+
+
+[dokumen]
+class SystemLanguageModelUnavailableReason ( IntEnum ): """Alasan mengapa model dasar sistem mungkin tidak tersedia. 
+    
+
+    Enumerasi ini mendefinisikan kemungkinan alasan mengapa model dasar sistem 
+    tidak dapat digunakan pada perangkat saat ini atau dalam konteks saat ini.
+
+    Atribut: 
+        APPLE_INTELLIGENCE_NOT_ENABLED: Fitur Apple Intelligence tidak diaktifkan 
+            pada perangkat ini atau untuk pengguna ini. 
+        DEVICE_NOT_ELIGIBLE: Perangkat tidak memenuhi persyaratan untuk menjalankan 
+    model             bahasa sistem. 
+        MODEL_NOT_READY: Model masih sedang diunduh atau dipersiapkan dan belum 
+            siap digunakan. 
+        UNKNOWN: Alasan ketidaktersediaan tidak diketahui atau tidak ditentukan.
+
+
+    APPLE_INTELLIGENCE_NOT_ENABLED  =  0 
+    DEVICE_NOT_ELIGIBLE  =  1 
+    MODEL_NOT_READY  =  2 
+    UNKNOWN  =  0xFF
+
+
+
+
+[dokumen]
+class SystemLanguageModelUseCase ( IntEnum ): """Kasus penggunaan untuk model dasar sistem. 
+    
+
+    Enumerasi ini mendefinisikan berbagai kasus penggunaan yang dapat ditentukan saat 
+    membuat model dasar sistem. Kasus penggunaan membantu mengoptimalkan perilaku model 
+    untuk tugas-tugas tertentu.
+
+    Atribut: 
+        UMUM: Model dasar serbaguna yang cocok untuk berbagai 
+            tugas pemrosesan bahasa alami. 
+    PENANDAAN_KONTEN         : Kasus penggunaan khusus yang dioptimalkan untuk 
+            tugas klasifikasi dan penandaan konten.
+
+
+    UMUM  =  0 
+    PENANDAAN_KONTEN  =  1
+
+
+
+
+[dokumen]
+class SystemLanguageModelGuardrails ( IntEnum ): """Pengaturan pembatas untuk model dasar sistem. 
+    
+
+    Enumerasi ini mendefinisikan berbagai tingkatan penyaringan konten dan pengaman 
+    yang dapat diterapkan pada model dasar sistem. Pengaman membantu 
+    memastikan perilaku model yang tepat dan aman.
+
+    Atribut: 
+        DEFAULT: Batasan standar dengan penyaringan konten seimbang yang sesuai 
+            untuk kasus penggunaan umum. 
+        PERMISSIVE_CONTENT_TRANSFORMATIONS: Batasan yang lebih permisif yang memungkinkan 
+    fleksibilitas             lebih besar dalam tugas transformasi konten sambil tetap mempertahankan 
+            langkah-langkah keamanan dasar.
+
+
+    DEFAULT  =  0 
+    PERMISSIVE_CONTENT_TRANSFORMATIONS  =  1
+
+
+
+
+[dokumen]
+class SystemLanguageModel ( _ManagedObject ): """Merepresentasikan model dasar pada perangkat yang digunakan oleh Apple Intelligence. 
+    
+
+    Kelas ini menyediakan antarmuka utama untuk berinteraksi dengan 
+    model dasar sistem. Kelas ini mengelola siklus hidup objek model C yang mendasarinya dan menyediakan 
+    metode untuk memeriksa ketersediaan dan mengkonfigurasi perilaku model.
+
+    Model ini dapat dikonfigurasi dengan berbagai kasus penggunaan dan pengaturan pembatas 
+    untuk mengoptimalkan perilaku untuk tugas-tugas spesifik dan memastikan penyaringan konten yang tepat.
+
+    Contoh: 
+        Membuat dan memeriksa ketersediaan model::
+
+            impor apple_fm_sdk sebagai fm
+
+            # Buat model dengan pengaturan default 
+            model = fm.SystemLanguageModel()
+
+            # Buat model dengan pengaturan khusus 
+            model = fm.SystemLanguageModel( 
+                use_case=fm.SystemLanguageModelUseCase.CONTENT_TAGGING, 
+                guardrails=fm.SystemLanguageModelGuardrails.PERMISSIVE_CONTENT_TRANSFORMATIONS 
+            )
+
+            # Periksa apakah model tersedia 
+            is_available, reason = model.is_available() 
+            if not is_available: 
+                print(f"Model tidak tersedia: {reason}") 
+    """
+
+
+[dokumen]
+    def __init__ ( self , use_case : SystemLanguageModelUseCase = SystemLanguageModelUseCase . GENERAL , guardrails : SystemLanguageModelGuardrails = SystemLanguageModelGuardrails . DEFAULT , _ptr = None , ): """Buat model bahasa sistem. 
+        
+           
+           
+        
+    
+        
+
+        Menginisialisasi model bahasa sistem baru dengan kasus penggunaan dan 
+        pengaturan pengaman yang ditentukan. Model ini didukung oleh implementasi C dan 
+        konstruktor ini mengelola pembuatan dan siklus hidup objek C yang mendasarinya.
+
+        :param use_case: Kasus penggunaan untuk model, yang mengoptimalkan perilakunya 
+            untuk tugas-tugas spesifik. Defaultnya adalah GENERAL untuk penggunaan umum. 
+        :type use_case: SystemLanguageModelUseCase 
+        :param guardrails: Pengaturan pengaman yang mengontrol penyaringan konten 
+            dan langkah-langkah keamanan. Defaultnya adalah DEFAULT untuk penyaringan standar. 
+        :type guardrails: SystemLanguageModelGuardrails
+
+        :raises ImportError: Jika binding C Foundation Models tidak tersedia.
+
+        Contoh: 
+            Membuat model yang dikonfigurasi khusus::
+
+                impor apple_fm_sdk sebagai fm
+
+                # Buat dengan pengaturan default 
+                model = fm.SystemLanguageModel()
+
+                # Buat dengan pengaturan khusus 
+                model = fm.SystemLanguageModel( 
+                    use_case=fm.SystemLanguageModelUseCase.CONTENT_TAGGING, 
+                    guardrails=fm.SystemLanguageModelGuardrails.PERMISSIVE_CONTENT_TRANSFORMATIONS 
+                ) 
+        """ 
+        if  _ptr  is  not  None : 
+            # Konstruktor internal untuk ptr tertentu 
+            super () . __init__ ( _ptr ) 
+        else : 
+            # Konstruktor publik - buat model baru 
+            ptr  =  lib . FMSystemLanguageModelCreate ( use_case . value ,  guardrails . value ) 
+            super () . __init__ ( ptr )
+
+        # Pointer buram ini sudah memiliki 1 ref count berdasarkan `passRetained`
+
+
+[dokumen]
+    def is_available ( self , ) -> tuple [ bool , Optional [ SystemLanguageModelUnavailableReason ]]: """Periksa apakah model tersedia untuk digunakan. 
+        
+       
+        
+
+        Metode ini menanyakan sistem untuk menentukan apakah model bahasa 
+        dapat digunakan pada perangkat saat ini dan dalam konteks saat ini. Metode ini mengembalikan 
+        status ketersediaan dan, jika tidak tersedia, kode alasan yang menjelaskan 
+        mengapa model tersebut tidak dapat digunakan.
+
+        Alasan umum ketidaktersediaan meliputi Apple Intelligence yang belum 
+        diaktifkan, perangkat yang tidak memenuhi persyaratan, atau model yang masih dalam 
+        proses pengunduhan.
+
+        :return: Sebuah tuple yang berisi:
+
+            - bool: True jika model tersedia, False jika tidak 
+            - Optional[SystemLanguageModelUnavailableReason]: Alasan 
+              ketidaktersediaan jika model tidak tersedia, atau None jika tersedia 
+              : 
+        rtype: tuple[bool, Optional[SystemLanguageModelUnavailableReason]]
+
+        Contoh: 
+            Memeriksa ketersediaan model::
+
+                impor apple_fm_sdk sebagai fm
+
+                test_model = fm.SystemLanguageModel() 
+                is_available, reason = test_modelis_available()
+
+                Jika tersedia: 
+                    print("Model siap digunakan") 
+                else: 
+                    jika alasan: 
+                        print(f"Model tidak tersedia: {reason.name}")
+
+                        Jika alasan tidak tersedia (fm.SystemLanguageModelUnavailableReason.MODEL_NOT_READY), 
+                            cetak ("Mohon tunggu hingga model selesai diunduh") 
+                        Jika alasan tidak tersedia (fm.SystemLanguageModelUnavailableReason.DEVICE_NOT_ELIGIBLE), 
+                            cetak ("Perangkat ini tidak mendukung model")
+
+        Catatan: 
+            Metode ini harus dipanggil sebelum mencoba menggunakan model untuk 
+            memastikan model siap untuk inferensi. 
+        """ 
+        reason  =  c_int () 
+        is_available  =  lib . FMSystemLanguageModelIsAvailable ( 
+            self . _ptr ,  ctypes . byref ( reason ) 
+        )
+
+        Jika  is_available : 
+            kembalikan  True ,  None 
+        else : 
+            kembalikan  False ,  SystemLanguageModelUnavailableReason ( reason.value )​​
+
