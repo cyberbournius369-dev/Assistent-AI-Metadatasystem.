@@ -1,0 +1,54 @@
+# Facebook SDK for JavaScript with jQuery
+
+
+
+In this tutorial, you'll learn how to incorporate the Facebook JavaScript SDK into your jQuery-based web app. Both jQuery and the JavaScript SDK provide their own solutions for deferring code execution until the libraries have loaded, and this tutorial will help you combine the two and ensure both are ready to use before you invoke the SDK.
+
+This example uses jQuery 2.0.0 served from Google's Hosted Libraries CDN. To find out more about jQuery, take a look at the [jQuery Documentation](http://api.jquery.com)
+
+## Implementation {#implementation}
+
+Add jQuery to your document head, and implement the `$(document).ready()` method, which will execute when the DOM is complete and jQuery is instantiated. Your page will look something like this:
+
+```
+<html>
+<head>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <title>jQuery Example</title>
+  <script>
+    $(document).ready(function() {
+      // Execute some code here
+    });
+  </script>
+</head>
+```
+
+Instead of importing the Facebook JavaScript SDK with the default async script, use jQuery's `getScript()` method to import the SDK from the correct URL for your user's locale. You can leave out the protocol from the beginning of the URL, and this will serve a matching protocol for the current URL.
+
+By default, jQuery timestamps asynchronous requests to avoid them being cached by the browser. You'll want to disable this functionality using the `ajaxSetup()` method, so that the SDK is cached locally between pages.
+
+The `getScript()` method is asynchronous, so you'll pass an anonymous callback function in which you can do your SDK initialization code as usual. Add the App ID for your app from the [App Dashboard](https://developers.facebook.com/apps).
+
+```
+$(document).ready(function() {
+  $.ajaxSetup({ cache: true });
+  $.getScript('https://connect.facebook.net/en_US/sdk.js', function(){
+    FB.init({
+      appId: '{your-app-id}',
+      version: 'v2.7' // or v2.1, v2.2, v2.3, ...
+    });
+    $('#loginbutton,#feedbutton').removeAttr('disabled');
+    FB.getLoginStatus(updateStatusCallback);
+  });
+});
+```
+
+## Dependency Decoupling {#dependency-decoupling}
+
+Putting all your SDK invocation logic in the `getScript` callback will guarantee that the FB object exists, but it's not a great design pattern for a complex app. Since the `FB` object is global, you can put SDK logic outside the `getScript` callback as long as you check that it exists before calling it. Alternatively, you can use a module dependency framework such as [RequireJS](https://developers.facebook.com/documentation/javascript/howto/requirejs) to ensure that the FB object is loaded as part of application setup.
+
+## See Also {#seealso}
+
+* [JavaScript SDK Reference](https://developers.facebook.com/documentation/javascript)
+* [Use the JavaScript SDK with RequireJS](https://developers.facebook.com/documentation/javascript/howto/requirejs)
