@@ -1,0 +1,25 @@
+# JavaScript SDK
+
+
+
+## Guides
+
+#### [Examples](https://developers.facebook.com/documentation/javascript/examples)
+Try our examples for using the SDK: Trigger a Share dialog, Facebook Login and calling the Graph API.
+
+#### [Advanced Setup](https://developers.facebook.com/documentation/javascript/examples)
+Learn about customizing options of the Facebook SDK for JavaScript.
+
+### Frameworks
+
+#### [AngularJS](https://developers.facebook.com/documentation/javascript/howto/angularjs)
+
+Concepts how to integrate the Facebook SDK for JavaScript in your AngularJS app.
+
+#### [jQuery](https://developers.facebook.com/documentation/javascript/howto/jquery)
+
+Incorporate the Facebook  SDK for JavaScript into your jQuery-based web app.
+
+#### [RequireJS](https://developers.facebook.com/documentation/javascript/howto/requirejs)
+
+Incorporate the Facebook SDK for JavaScript with other JavaScript modules using RequireJS.
