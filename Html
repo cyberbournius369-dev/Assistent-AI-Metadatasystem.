@@ -1,0 +1,1519 @@
+Langsung ke konten
+API Model Meta
+
+Run inference
+
+Table of contents
+Run Muse Spark Open on your own infrastructure or call it through a hosted inference provider. The self-hosted runtimes load the released checkpoints and use the Muse Spark Open chat format described in the 
+prompting guide
+.
+
+Runtime	Best for	Checkpoints	Serving API
+SGLang
+High-throughput serving for concurrent users	BF16, NVFP4	OpenAI-compatible HTTP
+vLLM
+Production serving, high throughput	BF16, NVFP4	OpenAI-compatible HTTP
+TensorRT-LLM
+Optimized serving on NVIDIA Blackwell, on a single 4-GPU node	NVFP4	OpenAI-compatible HTTP
+NVIDIA Dynamo
+Disaggregated serving and KV-aware routing	NVFP4	OpenAI-compatible HTTP
+Hugging Face Transformers
+Native Python implementation for research and custom pipelines	BF16, NVFP4	Python API
+llama.cpp
+Portable inference across Metal, CUDA, ROCm, Vulkan, and CPU	ggml-org GGUFs	OpenAI-compatible HTTP
+Unsloth
+Local inference on macOS, Windows, Linux, and WSL	Unsloth Dynamic GGUFs	OpenAI- and Anthropic-compatible HTTP
+MLX
+Inference on Apple silicon, across two or four Mac Studio computers	NVFP4	OpenAI-compatible HTTP
+To call the model without provisioning GPUs, use a 
+hosted provider
+.
+
+Muse Spark Open is a mixture-of-experts model that serves across multiple GPUs. NVFP4 serves at TP4 on 4 × B300 and BF16 at TP8 on 8 × B300. Read 
+Choose a checkpoint
+ before you provision hardware.
+
+The commands on this page load each checkpoint by its Hugging Face repository ID, such as meta-models/Muse-Spark-Open-816B-A42B-NVFP4, and the runtime downloads the weights from Hugging Face. If you 
+downloaded the weights from Meta
+, replace the repository ID with the path to your local folder, such as ./muse-spark-open-nvfp4.
+
+Stream long reasoning
+Muse Spark Open produces long reasoning traces at higher reasoning strengths. Request streaming (stream: true) for reasoning workloads so long generations don't hit request timeouts. See 
+Recommended settings
+.
+
+Self-host
+Each tab is a quick start for one runtime: a command that starts a server or, for Transformers, a script that loads the model and generates a reply. Each runtime's section below covers prerequisites, checkpoint variants, and sending requests.
+
+
+SGLang
+
+vLLM
+
+TensorRT-LLM
+
+Transformers
+
+llama.cpp
+
+Unsloth
+
+MLX
+bash
+
+sglang serve \
+  --model-path meta-models/Muse-Spark-Open-816B-A42B-NVFP4 \
+  --tp-size 4 \
+  --ep-size 4 \
+  --quantization modelopt_fp4 \
+  --moe-runner-backend flashinfer_trtllm \
+  --mem-fraction-static 0.8 \
+  --host 0.0.0.0 \
+  --port 30000 \
+  --enable-layernorm-sp \
+  --enable-megamoe-for-layernorm-sp \
+  --speculative-algorithm DFLASH \
+  --speculative-draft-model-path RadixArk/Muse-Spark-Open-DFlash2 \
+  --speculative-draft-attention-backend fa4 \
+  --speculative-num-draft-tokens 8 \
+  --mm-feature-transport cpu \
+  --enable-hierarchical-cache \
+  --hicache-size 200 \
+  --reasoning-parser muse \
+  --tool-call-parser muse
+The SGLang and vLLM tabs both serve NVFP4 on 4 × B300; the SGLang tab adds MegaMoE. Each runtime's section below has the other variants.
+
+SGLang
+Serve Muse Spark Open with 
+SGLang
+, an inference framework for low-latency, high-throughput serving on anything from a single GPU to a large distributed cluster.
+
+Links
+SGLang blog post on Muse Spark Open
+: the features SGLang supports for Muse Spark Open at launch.
+
+SGLang cookbook page for Muse Spark Open
+: detailed deployment options.
+
+DFlash2 draft model
+: a DFlash2 checkpoint trained for speculative decoding with Muse Spark Open.
+
+Install
+Run Muse Spark Open with this Docker image:
+
+bash
+
+docker pull lmsysorg/sglang:dev-muse-spark-open
+For host setup, see the 
+SGLang installation documentation
+.
+
+Start the server
+To serve NVFP4 checkpoint:
+
+bash
+
+sglang serve \
+  --model-path meta-models/Muse-Spark-Open-816B-A42B-NVFP4 \
+  --tp-size 4 \
+  --ep-size 4 \
+  --quantization modelopt_fp4 \
+  --moe-runner-backend flashinfer_trtllm \
+  --mem-fraction-static 0.8 \
+  --host 0.0.0.0 \
+  --port 30000 \
+  --enable-layernorm-sp \
+  --enable-megamoe-for-layernorm-sp \
+  --speculative-algorithm DFLASH \
+  --speculative-draft-model-path RadixArk/Muse-Spark-Open-DFlash2 \
+  --speculative-draft-attention-backend fa4 \
+  --speculative-num-draft-tokens 8 \
+  --mm-feature-transport cpu \
+  --enable-hierarchical-cache \
+  --hicache-size 200 \
+  --reasoning-parser muse \
+  --tool-call-parser muse
+To serve BF16 checkpoint:
+
+bash
+
+sglang serve \
+  --model-path meta-models/Muse-Spark-Open-816B-A42B \
+  --tp-size 8 \
+  --ep-size 8 \
+  --dtype bfloat16 \
+  --mem-fraction-static 0.85 \
+  --host 0.0.0.0 \
+  --port 30000 \
+  --enable-layernorm-sp \
+  --enable-megamoe-for-layernorm-sp \
+  --speculative-algorithm DFLASH \
+  --speculative-draft-model-path RadixArk/Muse-Spark-Open-DFlash2 \
+  --speculative-draft-attention-backend fa4 \
+  --speculative-num-draft-tokens 8 \
+  --mm-feature-transport cpu \
+  --enable-hierarchical-cache \
+  --hicache-size 200 \
+  --reasoning-parser muse \
+  --tool-call-parser muse
+Recommended settings
+Untuk performa prefill terbaik pada checkpoint NVFP4, jalankan prefill dengan paralelisme sekuens dan kernel MegaMoE ( --enable-layernorm-sp --enable-megamoe-for-layernorm-spyang mana kedua perintah server di atas sudah memenuhi syarat). Prefill dibagi di keempat rank dan lapisan MoE-nya berjalan di MegaMoE; dekode tetap berada di kernel TensorRT-LLM MoE.
+
+Untuk menyetelnya, tambahkan perintah berikut --attention-backend trtllm_mha --page-size 128ke perintah server NVFP4 di atas, dan tetapkan batas token MegaMoE sebelum memulainya:
+
+pesta
+
+export SGLANG_OPT_DEEPGEMM_MEGA_MOE_NUM_MAX_TOKENS_PER_RANK=8192
+SGLANG_OPT_DEEPGEMM_MEGA_MOE_NUM_MAX_TOKENS_PER_RANKMengatur jumlah maksimum token yang memicu MegaMoE. Meningkatkannya dapat meningkatkan kinerja pengisian awal pada ukuran batch yang lebih besar, tetapi menggunakan lebih banyak memori perangkat.
+
+Penguraian kode spekulatif
+Itu
+Model draf DFlash2
+mengusulkan blok berisi delapan token draf per langkah, dan Muse Spark Open memverifikasinya dalam satu kali proses. Kedua perintah server di atas mengaktifkannya dengan --speculative-algorithm DFLASHdan tiga --speculative-*flag setelahnya. Hapus keempat flag tersebut untuk menjalankan tanpa dekode spekulatif.
+
+HiCache
+HiCache memindahkan cache KV ke memori host yang dipin, sehingga prefiks yang dikeluarkan dipulihkan alih-alih dihitung ulang. Kedua perintah server di atas mengaktifkannya dengan --enable-hierarchical-cache --hicache-size 200.
+
+--hicache-sizeadalah memori host yang dipin per rank tensor-parallel, dalam GB: perintah NVFP4 (empat rank) memin 800 GB dan perintah BF16 (delapan rank) memin 1,6 TB. Untuk menentukan ukuran tingkat host relatif terhadap pool KV perangkat, berikan --hicache-ratio N. Hapus kedua flag untuk melayani tanpa HiCache.
+
+Pisahkan isi awal dan dekode
+Prefill menjalankan MegaMoE dan paralelisme sekuens dengan HiCache. Decode menjalankan kernel TensorRT-LLM MoE dengan DFlash2. Jalankan prefill dan decode sebagai dua server pada masing-masing empat GPU, dengan router di depannya yang menerima permintaan klien:
+
+B300: kedua server berbagi satu node 8-GPU, pra-pengisian pada GPU 0–3 dan dekode pada GPU 4–7.
+GB300: setiap server menggunakan node 4-GPU penuh, jadi pengisian awal dan dekode berjalan pada node yang terpisah.
+1. Siapkan lingkungan untuk perangkat keras Anda. Jalankan blok yang sesuai sebelum memulai setiap server.
+
+Di B300, di terminal pengisian awal:
+
+pesta
+
+export MC_INTRANODE_NVLINK=true
+export MC_TCP_ENABLE_CONNECTION_POOL=true
+export SGLANG_MOONCAKE_CUSTOM_MEM_POOL=INTRA_NODE_NVLINK
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+Pada B300, di terminal dekode:
+
+pesta
+
+export MC_INTRANODE_NVLINK=true
+export MC_TCP_ENABLE_CONNECTION_POOL=true
+export SGLANG_MOONCAKE_CUSTOM_MEM_POOL=INTRA_NODE_NVLINK
+export CUDA_VISIBLE_DEVICES=4,5,6,7
+Pada GB300, baik pada node prefill maupun node decode:
+
+pesta
+
+export NCCL_NVLS_ENABLE=1
+export NCCL_MNNVL_ENABLE=1
+export NCCL_CUMEM_ENABLE=1
+export SGLANG_MOONCAKE_CUSTOM_MEM_POOL=NVLINK
+export MC_FORCE_MNNVL=1
+2. Mulai server pengisian awal (MegaMoE, paralelisme sekuens, dan HiCache) pada port 30001:
+
+pesta
+
+sglang serve \
+  --model-path meta-models/Muse-Spark-Open-816B-A42B-NVFP4 \
+  --quantization modelopt_fp4 \
+  --moe-runner-backend flashinfer_trtllm \
+  --tp-size 4 --ep-size 4 \
+  --attention-backend trtllm_mha --page-size 128 \
+  --mem-fraction-static 0.8 \
+  --reasoning-parser muse --tool-call-parser muse \
+  --enable-layernorm-sp --enable-megamoe-for-layernorm-sp \
+  --enable-hierarchical-cache --hicache-size 200 \
+  --speculative-algorithm DFLASH \
+  --speculative-draft-model-path RadixArk/Muse-Spark-Open-DFlash2 \
+  --speculative-draft-attention-backend fa4 \
+  --speculative-num-draft-tokens 8 \
+  --disaggregation-mode prefill \
+  --disaggregation-transfer-backend mooncake \
+  --host 0.0.0.0 --port 30001
+3. Mulai server dekode (kernel TensorRT-LLM MoE dan DFlash2) pada port 30002, di terminal kedua pada B300 atau pada node dekode di GB300:
+
+pesta
+
+sglang serve \
+  --model-path meta-models/Muse-Spark-Open-816B-A42B-NVFP4 \
+  --quantization modelopt_fp4 \
+  --moe-runner-backend flashinfer_trtllm \
+  --tp-size 4 --ep-size 4 \
+  --attention-backend trtllm_mha --page-size 128 \
+  --mem-fraction-static 0.8 \
+  --reasoning-parser muse --tool-call-parser muse \
+  --speculative-algorithm DFLASH \
+  --speculative-draft-model-path RadixArk/Muse-Spark-Open-DFlash2 \
+  --speculative-draft-attention-backend fa4 \
+  --speculative-num-draft-tokens 8 \
+  --disaggregation-mode decode \
+  --disaggregation-transfer-backend mooncake \
+  --host 0.0.0.0 --port 30002
+4. Mulai router setelah kedua server aktif. Ganti <prefill-host>dan <decode-host>dengan alamat yang dapat dijangkau oleh router; pada B300, keduanya adalah 127.0.0.1.
+
+pesta
+
+sglang-router launch \
+  --pd-disaggregation \
+  --prefill http://<prefill-host>:30001 8998 \
+  --decode http://<decode-host>:30002 \
+  --host 0.0.0.0 --port 8000
+8998Setelah URL pra-isi, terdapat port bootstrap server pra-isi. Kirim permintaan klien ke router pada port 8000: dalam skrip di bawah ini
+Kirim permintaan
+, ubah port dari 30000 menjadi 8000.
+
+Kirim permintaan
+Berikut adalah skrip sederhana untuk mengirim permintaan:
+
+Python
+
+from openai import OpenAI
+client = OpenAI(
+    base_url="http://127.0.0.1:30000/v1",
+    api_key="null",
+    timeout=600.0,
+)
+model = client.models.list().data[0].id
+response = client.chat.completions.create(
+    model=model,
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Briefly explain: what is SGLang?"},
+    ],
+    temperature=1.0,
+    top_p=1.0,
+    max_tokens=16384, # For setting the maximum number of output tokens
+    reasoning_effort="high", # Can be one of low/medium/high/xhigh. xhigh by default.
+)
+choice = response.choices[0]
+print("Reasoning:", getattr(choice.message, "reasoning_content", None))
+print("Content:", choice.message.content)
+print("Finish reason:", choice.finish_reason)
+Untuk cara lain mengirim permintaan, seperti curl atau Python requests, lihat
+Tutorial SGLang
+.
+
+Lagi
+Untuk menjalankan Muse Spark Open pada GPU AMD atau Intel Xeon, lihat
+Platform perangkat keras
+. Itu
+Halaman buku masak SGLang
+memiliki lebih banyak opsi penyebaran.
+
+Untuk informasi lebih lanjut tentang SGLang, lihat
+Situs web SGLang
+dan
+Blog LMSYS
+.
+
+vLLM
+Sajikan Muse Spark Buka dengan
+vLLM
+di balik titik akhir yang kompatibel dengan OpenAI.
+
+Tautan
+Resep vLLM untuk Muse Spark Open
+Blog peluncuran vLLM untuk Muse Spark Open
+Prasyarat
+Bobot yang diunduh. Lihat
+Dapatkan modelnya
+.
+GPU NVIDIA atau AMD. Lihat
+Pilih pos pemeriksaan
+.
+Memasang
+Gambar yang sudah jadi tersedia untuk kedua vendor:
+
+NVIDIA:vllm/vllm-openai:muse-spark-open
+AMD:vllm/vllm-openai-rocm:muse-spark-open
+Gunakan salah satu image Docker di atas untuk menjalankan Muse Spark Open.
+
+Mulai server
+NVFP4 pada 4 × B300, dengan dekode spekulatif DSpark:
+
+pesta
+
+export VLLM_USE_RUST_FRONTEND=1
+​
+vllm serve meta-models/Muse-Spark-Open-816B-A42B-NVFP4 \
+    --tensor-parallel-size 4 \
+    --enable-expert-parallel \
+    --max-model-len 1048576 \
+    --reasoning-parser muse \
+    --tool-call-parser muse \
+    --enable-auto-tool-choice \
+    --speculative-config '{"method":"dspark","model": "Inferact/Muse-Spark-Open-DSpark","num_speculative_tokens":7,"draft_sample_method":"probabilistic","rejection_sample_method":"block","enable_adaptive_verification":true}'
+Untuk BF16, sajikan meta-models/Muse-Spark-Open-816B-A42Bdengan --tensor-parallel-size 88 × B300 dan simpan bendera lainnya.
+
+--max-model-len 1048576Melayani jendela konteks penuh sebanyak 1.048.576 token. Memori KV pada lapisan perhatian penuh meningkat seiring dengan panjang konteks, jadi jika beban kerja Anda membutuhkan lebih sedikit, kurangi seperti yang dijelaskan dalam
+Panjang konteks
+.
+
+Kirim permintaan
+vLLM mengekspos endpoint yang kompatibel dengan OpenAI pada port 8000:
+
+keriting
+
+curl http://localhost:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "meta-models/Muse-Spark-Open-816B-A42B-NVFP4",
+    "messages": [{"role": "user", "content": "Refactor this module."}],
+    "reasoning_effort": "xhigh"
+  }'
+Upaya penalaran defaultnya adalah xhigh; atur reasoning_effortke low, medium, high, atau xhigh. Lihat
+Kekuatan penalaran
+.
+
+Penalaran dikembalikan secara terpisah dari content, dan panggilan alat tiba sebagai tool_callsarray standar. Penguraian terjadi di sisi server, sehingga kerangka kerja yang kompatibel dengan OpenAI tidak memerlukan penanganan khusus model.
+
+Kirim gambar, video, dan audio.
+keriting
+
+curl http://localhost:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "meta-models/Muse-Spark-Open-816B-A42B-NVFP4",
+    "messages": [{"role": "user", "content": [
+      {"type": "image_url", "image_url": {"url": "https://example.com/screenshot.png"}},
+      {"type": "video_url", "video_url": {"url": "https://example.com/demo.mp4"}},
+      {"type": "audio_url", "audio_url": {"url": "https://example.com/clip.wav"}},
+      {"type": "text",      "text": "What is happening here, and when?"}
+    ]}]
+  }'
+Token berhenti
+Muse Spark Open perlu berhenti pada <|eot|>token akhir teks. Jangan pernah berhenti pada <|eom|>, yang mengakhiri pesan sementara giliran berlanjut. Lihat
+Token berhenti
+.
+
+TensorRT-LLM
+NVIDIA TensorRT-LLM
+Server ini menjalankan Muse Spark Open pada GPU NVIDIA Blackwell melalui server yang kompatibel dengan OpenAI ( trtllm-serve). Implementasi yang telah divalidasi menjalankan checkpoint NVFP4 pada satu node Blackwell 4-GPU (tensor parallel 4, expert parallel 4). Konfigurasi ini menggunakan cache KV FP8, grafik CUDA, prefill chunked, dan penggunaan kembali blok cache KV. Server ini mendukung input gambar, video, dan audio, decoding terpandu (mode JSON dan skema JSON), pemanggilan alat, dan decoding spekulatif opsional.
+
+Tautan
+Panduan penerapan Muse Spark Open untuk TensorRT-LLM
+Contoh yang dapat dijalankan dan konfigurasi penyajian yang telah divalidasi
+Blog teknis NVIDIA: skalakan alur kerja pengkodean agen dengan Muse Spark Open di NVIDIA GB300 NVL72
+Memasang
+Dukungan Muse Spark Open ada di cabang TensorRT-LLM feat/musespark-open. Bangun TensorRT-LLM dari cabang tersebut; tidak ada kontainer atau wheel rilis yang sudah dibuat sebelumnya yang menyertakan dukungan Muse Spark Open.
+
+Kloning cabang dan bangun dari kode sumber mengikuti petunjuk berikut.
+panduan membangun dari kode sumber
+Satu-satunya perbedaan dari panduan tersebut adalah cabang dan arsitektur Blackwell CUDA ( 100-real):
+
+pesta
+
+git clone --branch feat/musespark-open https://github.com/NVIDIA/TensorRT-LLM.git
+cd TensorRT-LLM
+git lfs pull
+Kemudian, di dalam kontainer pengembangan TensorRT-LLM (lihat panduan untuk develtag kontainer dan flag yang diperlukan docker run), bangun dan instal dalam mode yang dapat diedit, dengan menargetkan Blackwell:
+
+pesta
+
+python3 scripts/build_wheel.py --use_ccache -a "100-real" \
+    --skip_building_wheel --linking_install_binary
+pip install -e .
+Anda juga memerlukan checkpoint Muse Spark Open format Hugging Face yang lengkap beserta file tokenizer dan prosesornya:
+meta-model/Muse-Spark-Open-816B-A42B-NVFP4
+(varian BF16,
+meta-model/Muse-Spark-Open-816B-A42B
+(juga diterbitkan). Checkpoint NVFP4 mengirimkan bobot expert yang telah dirouting dan telah dikuantisasi ke NVFP4; tidak diperlukan langkah kuantisasi tambahan.
+
+Mulai server
+Muse Spark Open at TP4/EP4 fits on a single Blackwell 4-GPU node, so trtllm-serve launches directly (no multi-node launcher needed). Write the recommended settings (next section) to a YAML file and pass it with --config:
+
+bash
+
+trtllm-serve meta-models/Muse-Spark-Open-816B-A42B-NVFP4 \
+    --config serve_config.yaml \
+    --custom_tokenizer musespark_open \
+    --tool_parser musespark \
+    --reasoning_parser musespark
+Pass --custom_tokenizer musespark_open, --tool_parser musespark, and --reasoning_parser musespark explicitly; the two parsers enable tool-call and reasoning-content extraction on /v1/chat/completions. The server listens on localhost:8000. Add --host 0.0.0.0 --port 8000 if it needs to be reachable from other hosts. The server is ready when the log shows Application startup complete; the first query may take longer due to warmup.
+
+Recommended settings
+Start from the validated aggregated serving configuration, serve_config.yaml, and tune it for your workload:
+
+YAML
+
+tensor_parallel_size: 4
+moe_expert_parallel_size: 4
+enable_attention_dp: false
+max_batch_size: 256
+max_num_tokens: 8192
+max_seq_len: 49152
+trust_remote_code: true
+enable_chunked_prefill: true
+disable_overlap_scheduler: false
+attn_backend: TRTLLM
+allreduce_strategy: NCCL
+guided_decoding_backend: xgrammar
+cuda_graph_config:
+  max_batch_size: 256
+  enable_padding: true
+moe_config:
+  backend: TRTLLM
+kv_cache_config:
+  # FP8 KV cache is required on GB300 (SM103) when chunked prefill or
+  # block reuse is enabled.
+  dtype: fp8
+  enable_block_reuse: true
+  enable_partial_reuse: true
+  free_gpu_memory_fraction: 0.8
+Notes:
+
+FP8 KV cache is required on GB300 (SM103) with chunked prefill or KV reuse. For this model's head dimension (64), the fused paged-context attention kernel exists only for the FP8 KV-cache dtype; a 16-bit KV cache in that combination is refused at startup.
+max_seq_len: 49152 is the validated serving window; the model supports up to 1M tokens of context. Longer windows need proportionally more KV-cache memory.
+On out-of-memory errors, reduce kv_cache_config.free_gpu_memory_fraction, max_batch_size, or max_seq_len.
+Send requests
+The server exposes the OpenAI-compatible API:
+
+curl
+
+curl http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" -d '{
+    "model": "meta-models/Muse-Spark-Open-816B-A42B-NVFP4",
+    "messages": [{"role": "user", "content": "Where is New York?"}],
+    "max_tokens": 16384
+}'
+Muse Spark Open is a reasoning model: with --reasoning_parser musespark, each chat response returns the chain-of-thought in a separate reasoning_content field and the user-facing answer in content. Both are drawn from the same max_tokens budget, so set max_tokens large enough to cover the reasoning and the answer. Too small a budget is spent entirely on reasoning and returns an empty content with "finish_reason": "length".
+
+Guided decoding (JSON mode and JSON schema via the xgrammar backend) works through the standard response_format field. The constraint applies to content (the answer), so the budget must also leave room for the model to finish reasoning first:
+
+curl
+
+curl http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" -d '{
+    "model": "meta-models/Muse-Spark-Open-816B-A42B-NVFP4",
+    "messages": [{"role": "user", "content": "Give me a city and its country as JSON."}],
+    "max_tokens": 16384,
+    "response_format": {"type": "json_object"}
+}'
+Image, video, and audio inputs are accepted through the standard multimodal chat-completions content parts; multimodal token budgets count against max_num_tokens and max_seq_len like text tokens.
+
+More
+The 
+TensorRT-LLM deployment guide for Muse Spark Open
+ covers key YAML options, multimodal token budgets, speculative decoding, benchmarking with tensorrt_llm.serve.scripts.benchmark_serving, and troubleshooting.
+For disaggregated serving, with prefill and decode on separate workers, see 
+NVIDIA Dynamo
+, which uses TensorRT-LLM as its backend engine.
+NVIDIA Dynamo
+NVIDIA Dynamo
+ provides an OpenAI-compatible frontend, reasoning and tool-call parsing, disaggregated serving, and KV-aware routing.
+
+Links
+Dynamo documentation
+Muse Spark Open Dynamo recipe
+Install
+See the 
+Dynamo installation guide
+. Use the Muse Spark Open-enabled image and checkpoint specified in the model recipe, including the latest tokenizer, processor, and chat template.
+
+Start the server
+Follow the model recipe for launch commands and backend settings. The 
+Dynamo quickstart
+ explains how the frontend and model worker run together.
+
+Recommended settings
+See the 
+Dynamo recipes
+ for recommended deployment settings.
+
+Send requests
+See the request examples in the 
+Dynamo quickstart
+ and model recipe. Chat completions separate reasoning_content from content and return structured tool_calls when tools are supplied.
+
+More
+Dynamo recipe catalog
+Disaggregated serving
+KV-aware routing
+Hugging Face Transformers
+Muse Spark Open comes with a native Hugging Face Transformers implementation, so you can run it using familiar APIs and integrate it into your workflows. It supports text, images, audio, and video, as well as agentic use cases including tool calls. Checkpoints are available in 
+BF16
+ and 
+NVFP4 formats
+. You can post-train Muse Spark Open with Transformer Reinforcement Learning (TRL) to adapt it to your own tasks and datasets; see 
+Post-train with TRL
+.
+
+Links
+Transformers docs
+. These are always the source of truth for using Muse Spark Open with Transformers.
+Hugging Face collection
+Hugging Face blog post on Muse Spark Open
+Post-train with TRL
+Install
+Install Hugging Face Transformers with:
+
+bash
+
+pip install -U "transformers>=5.19"
+See the 
+Transformers installation guide
+ for more options.
+
+Run the model
+The Muse Spark Open implementation provides MuseSparkForConditionalGeneration for text generation from multimodal inputs and MuseSparkProcessor for preparing conversations. The processor combines the tokenizer, image and video processors, audio feature extractor, and chat template.
+
+Use a DistributedConfig to configure the parallelism settings. tp_size is the number of devices across which the dense layers are sharded, and ep_size is the number of devices across which the experts are distributed.
+
+The example below shows how to define the distributed config, load the model with AutoModelForMultimodalLM, preprocess the inputs, and generate and decode the output.
+
+Python
+
+import os
+​
+from transformers import AutoModelForMultimodalLM, AutoProcessor, DistributedConfig
+​
+distributed_config = DistributedConfig(
+    tp_size=int(os.environ["WORLD_SIZE"]),
+    ep_size=int(os.environ["WORLD_SIZE"]),
+)
+​
+processor = AutoProcessor.from_pretrained("meta-models/Muse-Spark-Open-816B-A42B")
+model = AutoModelForMultimodalLM.from_pretrained(
+    "meta-models/Muse-Spark-Open-816B-A42B",
+    distributed_config=distributed_config,
+)
+​
+messages = [
+    {"role": "user", "content": "Explain in one sentence why the sky is usually blue."},
+]
+inputs = processor.apply_chat_template(
+    messages,
+    reasoning_effort="low",  # default: xhigh, options: low/medium/high/xhigh
+    add_generation_prompt=True,
+    tokenize=True,
+    return_dict=True,
+    return_tensors="pt",
+).to(model.device).to(model.dtype)
+input_len = inputs["input_ids"].shape[-1]
+​
+outputs = model.generate(**inputs, max_new_tokens=512)
+print(processor.decode(outputs[0][input_len:], skip_special_tokens=False))
+# to=self<|message|>We need to explain in one sentence why sky is usually blue.
+# ...
+# <|eom|><|start|>assistant to=user<|message|>The sky appears blue because air molecules scatter shorter-wavelength blue light from the sun more strongly than longer-wavelength red light.<|eot|>
+Save the script above as run_muse_spark_open.py and launch it with torchrun on every node using Slurm:
+
+bash
+
+#!/bin/bash
+#SBATCH --job-name=muse-spark-open
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=8
+​
+export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+export MASTER_PORT=29500
+​
+srun bash -c 'torchrun \
+    --nnodes=$SLURM_NNODES \
+    --nproc-per-node=8 \
+    --node-rank=$SLURM_NODEID \
+    --master-addr=$MASTER_ADDR \
+    --master-port=$MASTER_PORT \
+    run_muse_spark_open.py'
+NVFP4 weights
+NVFP4 
+quantized weights
+ allow running the model with lower memory requirements on compatible hardware. The inference code is the same apart from the model ID, but NVFP4 needs a Transformers build from a pull request branch, installed below.
+
+Check the Transformers documentation first
+The 
+Transformers documentation
+ is the source of truth on how to run NVFP4 weights in Transformers. The Transformers package moves faster than this page: check the documentation first for the latest information.
+
+NVFP4 support requires Transformers from the 
+NVFP4 pull request branch
+:
+
+bash
+
+pip install git+https://github.com/huggingface/transformers.git@finegrained-per-scheme-demo
+The weights can then be loaded by setting the model name to "meta-models/Muse-Spark-Open-816B-A42B-NVFP4" as demonstrated below.
+
+Python
+
+import os
+​
+from transformers import AutoModelForMultimodalLM, AutoProcessor, DistributedConfig
+​
+distributed_config = DistributedConfig(
+    tp_size=int(os.environ["WORLD_SIZE"]),
+    ep_size=int(os.environ["WORLD_SIZE"]),
+)
+​
+processor = AutoProcessor.from_pretrained("meta-models/Muse-Spark-Open-816B-A42B-NVFP4")
+model = AutoModelForMultimodalLM.from_pretrained(
+    "meta-models/Muse-Spark-Open-816B-A42B-NVFP4",
+    distributed_config=distributed_config,
+)
+​
+messages = [
+    {"role": "user", "content": "Explain in one sentence why the sky is usually blue."},
+]
+inputs = processor.apply_chat_template(
+    messages,
+    reasoning_effort="low",
+    add_generation_prompt=True,
+    tokenize=True,
+    return_dict=True,
+    return_tensors="pt",
+).to(model.device).to(model.dtype)
+input_len = inputs["input_ids"].shape[-1]
+​
+outputs = model.generate(**inputs, max_new_tokens=512)
+print(processor.decode(outputs[0][input_len:], skip_special_tokens=False))
+Launch it with torchrun and the same Slurm script as 
+Run the model
+.
+
+More
+See the full 
+Transformers documentation for Muse Spark
+ to see how to use the pipeline API and run inference for all modalities, including image, video, and audio.
+
+The 
+Hugging Face blog post on Muse Spark Open
+ covers the model in depth and more ways to deploy it with Transformers.
+
+llama.cpp
+Portable inference across Metal, CUDA, ROCm, Vulkan, and CPU. llama.cpp and the Llama app support Muse Spark Open.
+
+Install
+Install a prebuilt llama binary for your platform:
+
+bash
+
+curl -LsSf https://llama.app/install.sh | sh
+Serve
+llama serve -hf downloads, caches, and serves a model in one command. Muse Spark Open supports up to 1,048,576 tokens of context.
+
+bash
+
+llama serve -hf ggml-org/Muse-Spark-Open-816B-A42B-GGUF --chat-template-kwargs '{"reasoning_effort":"low"}'
+To serve a specific quantization, add its suffix. ggml-org ships three quantizations for this release: Q4_K_S, Q8_0, and Q2_K.
+
+bash
+
+llama serve -hf ggml-org/Muse-Spark-Open-816B-A42B-GGUF:Q4_K_S
+llama serve -hf ggml-org/Muse-Spark-Open-816B-A42B-GGUF:Q8_0
+llama serve -hf ggml-org/Muse-Spark-Open-816B-A42B-GGUF:Q2_K
+The server exposes an OpenAI-compatible endpoint. Open http://localhost:8080 to chat with Muse Spark Open in the Llama WebUI, which supports images, audio, and Model Context Protocol (MCP) tools.
+
+Useful flags:
+
+Flag	Why
+-a muse-spark-open	API alias. By default, this is the checkpoint path.
+--chat-template-kwargs	Sets reasoning_effort, see below. Template default is xhigh.
+-np N	Concurrent slots. The context length is divided across the slots, so long-context agents should use -np 1.
+--api-key	Optional key to gate endpoints. /health and /v1/models still answer without it.
+Smoke test (--noproxy ensures the loopback request connects directly):
+
+curl
+
+curl -s --noproxy '*' http://127.0.0.1:8080/v1/chat/completions \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <your-key>" \
+  -d '{"model":"muse-spark-open","messages":[{"role":"user","content":"What is 17 * 23?"}],"temperature":1.0}'
+Control reasoning
+The chat template reads reasoning_effort and defaults to xhigh.
+
+Set it server-wide with --chat-template-kwargs, or per request:
+
+JSON
+
+{"model":"muse-spark-open","messages":[...],"chat_template_kwargs":{"reasoning_effort":"low"}}
+The model supports four levels: low, medium, high, xhigh.
+
+Reasoning can't be turned off. The chat template rejects "reasoning_effort": "none", and --reasoning off leaves the output unchanged. Set reasoning_effort to low to spend fewer thinking tokens.
+
+Vision
+You can upload images through the Web UI. For applications that use the server endpoint, send a remote URL, a data:image/...;base64,... URI, or a local path:
+
+curl
+
+curl -s http://127.0.0.1:8080/v1/chat/completions \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <your-key>" \
+  -d '{"model":"muse-spark-open","messages":[{"role":"user","content":[
+        {"type":"text","text":"What is in this image?"},
+        {"type":"image_url","image_url":{"url":"data:image/png;base64,..."}}
+      ]}],"temperature":1.0}'
+Audio
+Similarly to vision, you can either upload through the Web UI or send base64 encoded files to the endpoint. Audio follows the OpenAI input_audio shape: raw base64 in data, not a data URL, and the file type (wav or mp3) in format.
+
+curl
+
+curl -s http://127.0.0.1:8080/v1/chat/completions \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <your-key>" \
+  -d '{"model":"muse-spark-open","messages":[{"role":"user","content":[
+        {"type":"text","text":"Transcribe this audio."},
+        {"type":"input_audio","input_audio":{"data":"<base64>","format":"wav"}}
+      ]}],"temperature":1.0}'
+CLI
+You can also use llama cli to interact with the model through CLI.
+
+bash
+
+llama cli -hf ggml-org/Muse-Spark-Open-816B-A42B-GGUF -c 32768
+After you launch llama cli, use the /image command to pass in images. You can then enter a text prompt.
+
+bash
+
+> /image image.png
+Loaded media from 'image.png'
+​
+> describe this image
+Similarly, to pass audio:
+
+bash
+
+> /audio /path/example_audio.mp3
+​
+Loaded media from '/path/example_audio.mp3'
+​
+> transcribe this audio
+Verify tool calling
+curl
+
+curl -s http://127.0.0.1:8080/v1/chat/completions \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <your-key>" \
+  -d '{"model":"muse-spark-open","messages":[{"role":"user","content":"What is the weather in Paris in celsius? Use the tool."}],
+       "tools":[{"type":"function","function":{
+         "name":"get_weather","description":"Get current weather for a city.",
+         "parameters":{"type":"object","properties":{
+           "city":{"type":"string"},"units":{"type":"string","enum":["celsius","fahrenheit"]}},
+           "required":["city"]}}}],
+       "tool_choice":"auto","temperature":1.0}'
+The command above returns finish_reason: "tool_calls", a tool_calls array containing get_weather(city="Paris", units="celsius"), and reasoning in reasoning_content. Tool-call parsing occurs server-side, so OpenAI-compatible clients require no Muse Spark Open–specific logic.
+
+Context per slot
+Check n_ctx_slot in the startup log to determine the per-generation context limit. Don't read the limit from -c: it sets the total context length, shared across slots. When a generation exceeds its slot limit, the server may return neither an answer nor an error, making batch and evaluation failures difficult to diagnose.
+
+To increase concurrency while retaining the same per-slot limit, increase -c in proportion to -np:
+
+bash
+
+  -c 524288 -np 2        # 262144 per slot and 2-way concurrent
+Unsloth
+Run Muse Spark Open locally with Unsloth Desktop and Unsloth Dynamic GGUFs. Use the desktop interface to download and chat with the model, or serve an authenticated API for your applications and coding agents. Unsloth runs on macOS, Windows, Linux, and WSL, with CPU and GPU inference powered by llama.cpp.
+
+Muse Spark Open is Meta's 816B-parameter mixture-of-experts model with about 42B active parameters, built for multimodal reasoning, coding, and agentic workflows. It supports text, image, video, and audio input with text output. This recipe covers text chat and API serving; multimodal input depends on the inference backend and the model assets you load.
+
+Links
+Muse Spark Open: run locally with Unsloth
+Muse Spark Open Unsloth Dynamic GGUFs
+Download Unsloth Desktop
+Unsloth API guide
+Unsloth Dynamic GGUFs
+Choose a quantization
+Start with a Dynamic 2-bit GGUF and choose a variant that fits your hardware. Unsloth's guide gives the following approximate memory planning ranges: system RAM plus VRAM, or unified memory on Apple silicon. Requirements vary with the exact quantization, context length, KV-cache format, and runtime configuration.
+
+Quantization	Approximate total memory
+2-bit	300-315 GB
+3-bit	365-390 GB
+4-bit	470-500 GB
+6-bit	670-700 GB
+8-bit	870-950 GB
+BF16 language-model weights alone require approximately 1.63 TB before runtime overhead. Leave memory beyond the downloaded model size for the operating system, runtime, and KV cache. Longer contexts increase memory requirements. Offloading layers to system RAM reduces VRAM requirements; if memory pressure causes disk paging, generation can become much slower.
+
+Install Unsloth Desktop
+Download Unsloth
+ and complete the installer for your platform:
+
+macOS
+Windows
+Linux and WSL
+Alternatively, install from a terminal:
+
+
+macOS, Linux, WSL
+
+Windows PowerShell
+bash
+
+curl -fsSL https://unsloth.ai/install.sh | sh
+Use a recent Unsloth release with Muse Spark Open support. See the 
+platform installation guides
+ for additional setup instructions.
+
+Start the server
+In Unsloth Desktop:
+
+Launch Unsloth from your installed app shortcut.
+Open Model Hub, search for "Muse Spark Open", and select the Unsloth GGUF repository linked above.
+Download a quantization that fits your available memory. Start with Dynamic 2-bit; the CLI example below selects UD-Q2_K_XL.
+Load the model from Select model on the Chat page and send a short message to confirm that it responds.
+Open Settings > API, create an API key, and copy it. Use the endpoint URL shown in Unsloth when configuring your client.
+Unsloth provides automatic per-model inference presets and lets you edit sampling settings, context length, and the chat template. Check the values against the 
+recommended settings
+ below when loading Muse Spark Open.
+
+To load the model and start its API from the command line with the Unsloth CLI:
+
+bash
+
+unsloth run \
+  --model unsloth/Muse-Spark-Open-816B-A42B-GGUF:UD-Q2_K_XL \
+  -H 127.0.0.1 \
+  -p 8888 \
+  --context-length 32768 \
+  --temperature 1.0 \
+  --top-p 1.0 \
+  --min-p 0.0 \
+  --reasoning-effort medium
+The :UD-Q2_K_XL suffix selects the quantization. Unsloth starts the server, loads the UI, and prints the endpoint URL and API key. Keep this terminal running while sending requests.
+
+This example starts with a 32,768-token context to limit KV-cache memory. Increase --context-length as your available memory allows. The medium reasoning level is a starting choice for interactive use; change it to another supported level as needed.
+
+For a larger-memory configuration, select :UD-Q4_K_XL instead. Additional llama-server runtime flags let you adjust GPU layers, CPU threads, sampling, and networking; see the 
+Unsloth API guide
+.
+
+Recommended settings
+Setting	Recommended value
+Temperature	1.0
+Top-p	1.0
+Min-p	0.0 in the CLI example
+Starting quantization	Dynamic 2-bit
+Example serving context	32768 tokens; adjust for available memory
+Model maximum context	1048576 tokens
+Supported reasoning effort	low, medium, high, xhigh
+Use --reasoning-effort to pass the selected effort level to the model's chat template. The level takes effect only when the loaded template and backend support it. Choose low or medium for lighter reasoning, and high or xhigh for more demanding tasks. Muse Spark Open evaluations use xhigh for maximum reasoning strength.
+
+The model's maximum context is not a recommended allocation for every machine. Context includes the input and generated tokens, and a larger KV cache needs additional memory. Allow enough output tokens for both reasoning and the final answer.
+
+Send requests
+Unsloth exposes OpenAI-compatible /v1/chat/completions and /v1/responses endpoints, plus the Anthropic-compatible /v1/messages endpoint. Authenticate with your Unsloth API key. The examples below use Chat Completions.
+
+In a second terminal, set the base URL and the API key copied from Unsloth. These shell examples use Bash on macOS, Linux, or WSL, and require Python 3 for model discovery.
+
+bash
+
+export UNSLOTH_BASE_URL="http://127.0.0.1:8888"
+export UNSLOTH_API_KEY="paste-your-unsloth-api-key-here"
+Use the URL printed by your server if it differs. The /v1/models endpoint lists loaded and locally cached models. Select the loaded Muse Spark Open model's exact ID:
+
+bash
+
+UNSLOTH_MODEL_ID="$(
+  curl --fail-with-body "${UNSLOTH_BASE_URL}/v1/models" \
+    -H "Authorization: Bearer ${UNSLOTH_API_KEY}" |
+    python3 -c '
+import json
+import sys
+​
+models = [
+    model
+    for model in json.load(sys.stdin)["data"]
+    if model.get("loaded") is True
+    and "muse-spark-open" in model["id"].lower()
+]
+if len(models) != 1:
+    raise SystemExit("Load exactly one Muse Spark Open model and retry.")
+print(models[0]["id"])
+'
+)" && export UNSLOTH_MODEL_ID
+Send a chat request. The Python example needs the OpenAI SDK (python3 -m pip install -U openai) and runs in the same environment as the exported client variables:
+
+
+curl
+
+Python (OpenAI SDK)
+bash
+
+curl --fail-with-body "${UNSLOTH_BASE_URL}/v1/chat/completions" \
+  -H "Authorization: Bearer ${UNSLOTH_API_KEY}" \
+  -H "Content-Type: application/json" \
+  --data-binary @- <<JSON
+{
+  "model": "${UNSLOTH_MODEL_ID}",
+  "messages": [
+    {"role": "user", "content": "Explain mixture-of-experts models in three sentences."}
+  ],
+  "temperature": 1.0,
+  "top_p": 1.0,
+  "min_p": 0.0,
+  "reasoning_effort": "medium",
+  "enable_tools": false,
+  "max_tokens": 8192,
+  "stream": false
+}
+JSON
+min_p and enable_tools are Unsloth extensions to the Chat Completions format. Sending sampling values explicitly also applies them when using the desktop workflow. enable_tools: false keeps this request as text generation. For streaming, set "stream": true and add --no-buffer to curl.
+
+Check function calling
+Send an OpenAI-style tool definition to request a structured function call:
+
+curl
+
+curl --fail-with-body "${UNSLOTH_BASE_URL}/v1/chat/completions" \
+  -H "Authorization: Bearer ${UNSLOTH_API_KEY}" \
+  -H "Content-Type: application/json" \
+  --data-binary @- <<JSON
+{
+  "model": "${UNSLOTH_MODEL_ID}",
+  "messages": [
+    {"role": "user", "content": "Use add_integers to calculate 17 plus 25."}
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "add_integers",
+        "description": "Add two integers.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "a": {"type": "integer"},
+            "b": {"type": "integer"}
+          },
+          "required": ["a", "b"]
+        }
+      }
+    }
+  ],
+  "tool_choice": "required",
+  "temperature": 1.0,
+  "top_p": 1.0,
+  "min_p": 0.0,
+  "reasoning_effort": "medium",
+  "enable_tools": false,
+  "max_tokens": 8192,
+  "stream": false
+}
+JSON
+Unsloth supports this client-side function-calling format; successful tool use also depends on the loaded model and its chat template. Check for a structured choices[0].message.tool_calls array. Your application executes client-defined functions: parse the arguments, run the function, then send the assistant's tool-call message and a role: "tool" result with the matching tool_call_id in the next request. This request disables Unsloth's built-in server-side tools so your application handles the defined function.
+
+See the 
+curl and HTTP guide
+ and 
+Python SDK guide
+ for additional endpoint examples.
+
+Connect a coding agent
+Install your coding agent if it is not already available, load Muse Spark Open in Unsloth, and connect the agent:
+
+bash
+
+unsloth start claude
+You can also select the model while launching the agent:
+
+bash
+
+unsloth start claude \
+  --model unsloth/Muse-Spark-Open-816B-A42B-GGUF:UD-Q2_K_XL \
+  --context-length 32768 \
+  --temperature 1.0 \
+  --top-p 1.0 \
+  --min-p 0.0 \
+  --reasoning-effort medium
+On the default local address, passing --model starts a temporary server if Unsloth is not already running; that server stops when the agent exits. If Unsloth is already running, the launcher connects to it. Use --temperature for the Unsloth agent launcher. See 
+Unsloth Start
+ for supported agents and configuration options.
+
+Explore other workflows
+Unsloth inference guide
+: chat settings, web search, and Python or Bash execution.
+Unsloth Desktop
+: model downloads, training, and exporting workflows for supported models.
+MCP integrations
+: connect additional tools.
+llama.cpp
+: run the GGUFs directly. Use a current build with Muse Spark Open support. Enable CUDA for NVIDIA GPUs; on Apple silicon, disable CUDA and use the default Metal backend.
+llama-server documentation
+: context sizing, GPU offload, threading, and sampling flags.
+MLX
+Run Muse Spark Open on Apple silicon with MLX and the NVFP4 checkpoint. The model doesn't fit in one Mac's memory, so serve it across two Mac Studio computers with M5 Ultra and 512 GB of unified memory each, or four with 256 GB each. Four Macs serve fastest.
+
+Links
+NVFP4 weights on Hugging Face
+mlx-lm on GitHub
+MLX distributed documentation
+Prerequisites
+macOS 26.2 or later on every Mac. It adds the RDMA-over-Thunderbolt driver that MLX's jaccl backend uses. Turn on RDMA on each Mac as described in the 
+MLX distributed documentation
+.
+MLX 0.30.1 or later.
+A direct Thunderbolt 5 link between every pair of Macs. Connect each pair with two cables to double the link bandwidth. With four Macs, every Mac connects to each of the other three.
+Passwordless SSH from the primary Mac to every other Mac. These instructions call the primary mac-studio-1.local and the others mac-studio-2.local and so on; adjust the names to match your machines.
+Check that the primary can reach each other Mac without a password prompt:
+
+bash
+
+ssh mac-studio-2.local 'echo ok'
+If that prompts for a password, set up key-based access first:
+
+bash
+
+ssh-keygen -t ed25519
+ssh-copy-id mac-studio-2.local
+Install
+mlx.launch starts the program over SSH on every Mac, so install mlx-lm on each one:
+
+bash
+
+pip install -U mlx-lm
+Each Mac loads the model from its own disk, so each needs disk space for the full NVFP4 checkpoint.
+
+Create the hostfile
+mlx.launch reads which Macs to use from a hostfile. List every Mac in it, two or four. For the jaccl backend, each entry also carries the host's Thunderbolt IP addresses and RDMA devices. The 
+MLX distributed documentation
+ describes the format, and mlx.distributed_config can generate the file. These instructions save it as hostfile.json on the primary.
+
+Start the server
+Run this on the primary. It starts mlx_lm.server on every Mac in the hostfile and serves an OpenAI-compatible API on port 8080:
+
+bash
+
+mlx.launch --hostfile hostfile.json --backend jaccl --env MLX_METAL_FAST_SYNCH=1 -- \
+  mlx_lm.server --model meta-models/Muse-Spark-Open-816B-A42B-NVFP4 --port 8080
+Everything after -- is the program that mlx.launch runs on each Mac. --backend jaccl selects the RDMA-over-Thunderbolt backend. --env MLX_METAL_FAST_SYNCH=1 turns on an experimental MLX feature for fast CPU-GPU synchronization, which cuts communication overhead between the CPU, which drives the Thunderbolt link, and the GPU, which does the compute.
+
+Generate from the command line
+To test without a server, run mlx_lm.generate through the same launcher. The chat template defaults to xhigh reasoning, so leave room for reasoning tokens before the answer, and pass the 
+recommended sampling settings
+:
+
+bash
+
+mlx.launch --hostfile hostfile.json --backend jaccl --env MLX_METAL_FAST_SYNCH=1 -- \
+  mlx_lm.generate \
+    --model meta-models/Muse-Spark-Open-816B-A42B-NVFP4 \
+    --prompt "Give me a one-sentence summary of what you can do." \
+    --max-tokens 4096 \
+    --temp 1.0 \
+    --top-p 1.0
+Hosted providers
+Call Muse Spark Open through a hosted provider when you'd rather not provision GPU capacity yourself. These providers serve the open weights:
+
+Provider	Model string	Get a key
+Together AI
+meta-models/muse-spark-open	
+Together AI API keys
+Fireworks AI
+accounts/fireworks/models/muse-spark-open	
+API keys page
+Baseten
+meta-models/muse-spark-open	
+Baseten app
+, Settings → API Keys
+Groq
+meta-models/muse-spark-open	
+GroqCloud console
+, once your organization has access
+Nebius Token Factory
+meta-models/muse-spark-open	
+Token Factory API keys
+You can also call Muse Spark Open through 
+Modal
+ and 
+OpenRouter
+.
+
+Send a request
+Pick your provider's tab:
+
+
+Together AI
+
+Fireworks AI
+
+Baseten
+
+Groq
+
+Nebius Token Factory
+bash
+
+curl https://api.together.xyz/v1/chat/completions \
+  -H "Authorization: Bearer $TOGETHER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-models/muse-spark-open",
+    "messages": [{"role": "user", "content": "Explain mixture-of-experts models in two sentences."}]
+  }'
+Together AI
+Together AI serves Muse Spark Open on serverless and on-demand dedicated endpoints through an OpenAI-compatible API.
+
+Links
+Muse Spark Open on Together AI
+ has pricing and endpoint options.
+Model string
+Text
+
+meta-models/muse-spark-open
+Get a key
+Create an 
+API key
+ and export it:
+
+bash
+
+export TOGETHER_API_KEY="YOUR_API_KEY"
+Send requests
+The base URL is https://api.together.xyz/v1. Any OpenAI-compatible client works.
+
+curl
+
+curl https://api.together.xyz/v1/chat/completions \
+  -H "Authorization: Bearer $TOGETHER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-models/muse-spark-open",
+    "messages": [{"role": "user", "content": "Explain mixture-of-experts models in two sentences."}]
+  }'
+Fireworks AI
+Fireworks serves Muse Spark Open on serverless inference. You pay per token and send requests to an OpenAI-compatible endpoint. There is no deployment to provision. The model accepts text and images, supports tool calling, and has a context window of 1,048,576 tokens. You can set how much the model reasons on each request with reasoning_effort.
+
+For dedicated capacity, guaranteed throughput, or private networking, run the same model on an on-demand deployment.
+
+Links
+Muse Spark Open on Fireworks
+ is the model page, with pricing and a playground.
+Fireworks blog post on Muse Spark Open
+Fireworks quickstart
+ covers account setup and your first request.
+Post-train with Fireworks AI
+ covers LoRA fine-tuning and reinforcement learning on Muse Spark Open.
+Model string
+Text
+
+accounts/fireworks/models/muse-spark-open
+Get a key
+Create a Fireworks account at 
+fireworks.ai
+.
+Create an API key on the 
+API keys page
+, or run firectl api-key create.
+Export the key:
+bash
+
+export FIREWORKS_API_KEY="fw_..."
+Send requests
+The base URL is https://api.fireworks.ai/inference/v1. Any OpenAI-compatible client works.
+
+curl
+
+curl https://api.fireworks.ai/inference/v1/chat/completions \
+  -H "Authorization: Bearer $FIREWORKS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "accounts/fireworks/models/muse-spark-open",
+    "messages": [{"role": "user", "content": "Explain mixture-of-experts models in two sentences."}],
+    "max_tokens": 4096
+  }'
+With the OpenAI Python SDK:
+
+bash
+
+pip install openai
+Python
+
+import os
+from openai import OpenAI
+​
+client = OpenAI(
+    api_key=os.environ["FIREWORKS_API_KEY"],
+    base_url="https://api.fireworks.ai/inference/v1",
+)
+​
+response = client.chat.completions.create(
+    model="accounts/fireworks/models/muse-spark-open",
+    messages=[{"role": "user", "content": "Explain mixture-of-experts models in two sentences."}],
+    max_tokens=4096,
+)
+print(response.choices[0].message.content)
+Reasoning effort. Muse Spark Open always reasons. Set reasoning_effort to low, medium, high, or xhigh. The default is xhigh. Higher settings think longer and cost more output tokens. Use xhigh for hard reasoning, coding, and agentic tasks. Reasoning is returned in reasoning_content, separate from content. Thinking cannot be turned off, so reasoning_effort="none" is rejected.
+
+Python
+
+# Uses the client from the first Python example in this section
+response = client.chat.completions.create(
+    model="accounts/fireworks/models/muse-spark-open",
+    messages=[{"role": "user", "content": "How many primes are there below 1000?"}],
+    reasoning_effort="xhigh",
+    max_tokens=32768,
+)
+Images. Pass image URLs or base64 data URLs in the message content.
+
+Python
+
+# Uses the client from the first Python example in this section
+response = client.chat.completions.create(
+    model="accounts/fireworks/models/muse-spark-open",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "What is in this image?"},
+            {"type": "image_url", "image_url": {"url": "http://images.cocodataset.org/val2017/000000039769.jpg"}},
+        ],
+    }],
+)
+Tool calling. Pass tools in the OpenAI function-calling format. Tool calls come back in message.tool_calls.
+
+Python
+
+# Uses the client from the first Python example in this section
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "parameters": {
+            "type": "object",
+            "properties": {"city": {"type": "string"}},
+            "required": ["city"],
+        },
+    },
+}]
+​
+response = client.chat.completions.create(
+    model="accounts/fireworks/models/muse-spark-open",
+    messages=[{"role": "user", "content": "What's the weather in Menlo Park?"}],
+    tools=tools,
+)
+print(response.choices[0].message.tool_calls)
+Streaming (stream=True) and JSON mode (response_format={"type": "json_object"}) work the same way they do for other Fireworks chat models.
+
+More
+Serverless is billed per token for input, cached input, and output. Current rates are on the 
+model page
+.
+Prompt caching is automatic. Repeated prefixes, such as long system prompts and agent histories, are billed at the cached-input rate.
+For dedicated GPUs, higher rate limits, or reserved throughput, create an 
+on-demand deployment
+ of the same model, or 
+contact Fireworks
+.
+Fireworks also serves an 
+Anthropic-compatible Messages API
+, so Muse Spark Open can run in coding agents built for that API.
+Baseten
+Baseten serves Muse Spark Open on Model APIs (serverless, pay per token) and Dedicated Inference (single-tenant capacity), with the full 1,048,576-token context window and text, image, video, and audio input.
+
+Links
+Baseten launch blog post for Muse Spark Open
+Baseten model page for Muse Spark Open
+Baseten docs
+Model string
+Text
+
+meta-models/muse-spark-open
+Get a key
+Create an account in the 
+Baseten app
+.
+Go to Settings → API Keys and create a key.
+Send requests
+The endpoint is OpenAI-compatible. Point any OpenAI client at Baseten:
+
+Python
+
+import os
+from openai import OpenAI
+​
+client = OpenAI(
+    api_key=os.environ["BASETEN_API_KEY"],
+    base_url="https://inference.baseten.co/v1",
+)
+​
+response = client.chat.completions.create(
+    model="meta-models/muse-spark-open",
+    messages=[{"role": "user", "content": "Explain what a stack trace is in two sentences."}],
+)
+print(response.choices[0].message.content)
+Image, video, and audio inputs use the standard OpenAI content-part format (image_url, video_url, audio_url). Send media larger than ~74 MB by URL rather than inline base64; video inputs by URL are supported up to 200 MB.
+
+More
+Pricing: see the 
+Baseten model page for Muse Spark Open
+.
+The video encoder samples at most 96 frames per clip: a 720p clip costs about 144 tokens per second, capped at ~6.9K tokens from about 48 seconds on, so longer clips (up to 300 s) cost no more than that.
+Modal
+Modal serves Muse Spark Open. See 
+Muse Spark Open on Modal
+ for setup and request examples, and the 
+Modal blog post on Muse Spark Open
+.
+
+OpenRouter
+OpenRouter routes requests to upstream providers rather than hosting the model, so the provider serving your request depends on your routing configuration. See 
+Muse Spark Open on OpenRouter
+ for the model string and setup.
+
+Groq
+GroqCloud serves Muse Spark Open through an OpenAI-compatible API. Access requires approval for your organization; to request it, 
+contact the Groq team
+.
+
+Links
+Muse Spark Open on GroqCloud
+Groq blog post on Muse Spark Open
+Groq reasoning guide
+Groq SDKs
+Model string
+Text
+
+meta-models/muse-spark-open
+On GroqCloud the model has a 131,072-token context window and supports tool calling, structured outputs, and image input.
+
+Get a key
+Setelah organisasi Anda memiliki akses, buat kunci API di
+Konsol GroqCloud
+lalu ekspor:
+
+pesta
+
+export GROQ_API_KEY="YOUR_API_KEY"
+Kirim permintaan
+URL dasarnya adalah https://api.groq.com/openai/v1. Gunakan SDK Groq, atau SDK OpenAI apa pun dengan base_urlURL yang telah diatur ke URL tersebut.
+
+keriting
+
+curl https://api.groq.com/openai/v1/chat/completions \
+  -H "Authorization: Bearer $GROQ_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-models/muse-spark-open",
+    "reasoning_effort": "medium",
+    "messages": [{"role": "user", "content": "What is the capital of France?"}]
+  }'
+reasoning_effortmenerima low, medium, high, atau xhigh, dan secara default menggunakan xhigh. Pengaturan yang lebih rendah merespons lebih cepat. Lihat
+Kekuatan penalaran
+.
+
+Lagi
+Untuk pertanyaan terkait akses, hubungi
+Penjualan Groq
+.
+
+Pabrik Token Nebius
+Nebius Token Factory menyediakan Muse Spark Open pada endpoint tanpa server dengan API yang kompatibel dengan OpenAI. Anda membayar per token. Untuk mengirim permintaan, Anda memerlukan kunci API dan ID model di bawah ini.
+
+Tautan
+Muse Spark Terbuka di Token Factory
+memiliki detail endpoint, harga, dan ketersediaan terkini.
+Taman Bermain Pabrik Token
+Memungkinkan Anda mencoba model tersebut di browser.
+String model
+ID model peka terhadap huruf besar dan kecil:
+
+Teks
+
+meta-models/muse-spark-open
+Atur URL dasar klien Anda menjadi:
+
+Teks
+
+https://api.tokenfactory.us-north1.nebius.com/v1/
+Dapatkan kuncinya
+Buat akun Token Factory
+atau masuk.
+Menyelesaikan
+pengaturan penagihan
+Pembukaan rekening baru memerlukan kartu bank.
+Pilih proyek Anda dan buka.
+Kunci API
+.
+Buat kunci dan salin. Anda tidak dapat melihatnya lagi nanti.
+Ekspor kuncinya:
+pesta
+
+export NEBIUS_API_KEY="YOUR_API_KEY"
+Jauhkan kunci tersebut dari kode sumber dan aplikasi browser. Pastikan kunci tersebut dapat mencantumkan model:
+
+pesta
+
+curl --fail-with-body --silent --show-error \
+  https://api.tokenfactory.us-north1.nebius.com/v1/models \
+  -H "Authorization: Bearer $NEBIUS_API_KEY"
+Cari meta-models/muse-spark-opendi dalam respons. Jika tidak ada, periksa ketersediaan model untuk proyek yang memiliki kunci Anda.
+
+Kirim permintaan
+keriting
+
+curl --fail-with-body --silent --show-error \
+  https://api.tokenfactory.us-north1.nebius.com/v1/chat/completions \
+  -H "Authorization: Bearer $NEBIUS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-models/muse-spark-open",
+    "messages": [
+      {"role": "user", "content": "Say hello in one sentence."}
+    ],
+    "max_tokens": 16384
+  }'
+Jawabannya ada di choices[0].message.content.
+
+Dengan OpenAI Python SDK:
+
+pesta
+
+pip install openai
+Python
+
+import os
+​
+from openai import OpenAI
+​
+client = OpenAI(
+    api_key=os.environ["NEBIUS_API_KEY"],
+    base_url="https://api.tokenfactory.us-north1.nebius.com/v1/",
+)
+​
+response = client.chat.completions.create(
+    model="meta-models/muse-spark-open",
+    messages=[{"role": "user", "content": "Say hello in one sentence."}],
+    max_tokens=16384,
+)
+​
+print(response.choices[0].message.content)
+Pemanggilan alat. Lewatkan toolsformat pemanggilan fungsi OpenAI. Permintaan ini meminta panggilan get_weatherdengan cityargumen:
+
+Python
+
+# Uses the client from the first Python example in this section
+response = client.chat.completions.create(
+    model="meta-models/muse-spark-open",
+    messages=[{"role": "user", "content": "What is the weather in Paris?"}],
+    tools=[{
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city.",
+            "parameters": {
+                "type": "object",
+                "properties": {"city": {"type": "string"}},
+                "required": ["city"],
+                "additionalProperties": False,
+            },
+        },
+    }],
+    tool_choice={"type": "function", "function": {"name": "get_weather"}},
+    max_tokens=16384,
+)
+​
+for call in response.choices[0].message.tool_calls or []:
+    print(call.id, call.function.name, call.function.arguments)
+Permintaan tersebut tidak mengambil data cuaca itu sendiri. Aplikasi Anda menjalankan fungsi tersebut dan mengirimkan hasilnya kembali dengan ID panggilan yang dikembalikan. Lihat
+Referensi Penyelesaian Obrolan
+untuk toolskolom dan pesan alat.
+
+Lagi
+Panduan singkat Token Factory
+Mencakup pengaturan akun dan permintaan pertama Anda.
+Dokumentasi API
+mencantumkan titik akhir, parameter permintaan, dan format respons.
+Buku Resep Pabrik Token
+memiliki contoh kode yang dapat digunakan kembali dan aplikasi sampel.
+Langkah selanjutnya
+Setelah server Anda aktif, atur parameter pengambilan sampel, paralelisme, dan token berhenti dari
+pengaturan yang direkomendasikan
+, dan sampaikan permintaan Anda dengan cara berikut:
+panduan memberi petunjuk
+Untuk menyempurnakan model, lihat
+Pasca pelatihan
+.
+
+Mulailah menggunakan Meta Model API dan Muse Code - Muse Wonder, Muse Spark, Muse Image, Muse Voice Transcribe, Segment Anything Model, Muse Spark Open, dan Muse Glimmer - Meta Model API
