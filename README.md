@@ -1,3 +1,4 @@
+<img width="1280" height="1280" alt="received_2527690337640925" src="https://github.com/user-attachments/assets/23a00de3-880d-4b8c-a9fc-fdfb4080526e" />
 
 Langsung ke konten utama
 
