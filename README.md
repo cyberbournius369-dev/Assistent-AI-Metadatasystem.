@@ -369,3 +369,135 @@ Kebijakan Penggunaan
 Tambahkan ke Sumber Pilihan
 
 Bahasa inggris
+
+Meta Global AI Developer Hackathon. Hadiah senilai $1 juta.
+Daftar Sekarang
+
+
+Langsung ke konten
+Build Anda selanjutnya dimulai dengan Muse.
+Muse Wonder, kini tersedia di Meta Model API dan Muse Code. Muse Wonder Full, kini tersedia di Muse Code.
+
+Cobalah model Muse.
+Hubungi bagian penjualan
+
+Kode Muse
+Pemrograman multi-agen di terminal Anda.
+Dibuat untuk model Muse.
+
+
+Mac
+
+Windows
+curl -fsSL https://dev.meta.ai/install.sh | bash
+
+Model terbaru
+
+Muse Wonder
+Pemrograman mutakhir, agen yang berjalan lama, dan penggunaan komputer tingkat lanjut. Merencanakan tugas jangka panjang dan mendelegasikannya kepada sub-agen.
+
+
+Muse Wonder Full
+Model tercanggih kami hingga saat ini, menghadirkan performa SOTA (State-of-the-Air) untuk mengatasi alur kerja paling penting para pengembang.
+
+
+Muse Spark 1.3
+Dirancang untuk pengkodean jangka panjang dan pekerjaan berbasis agen. Kode lebih bersih, token lebih sedikit.
+
+
+Muse Spark Terbuka
+Model open-weight AS paling mumpuni hingga saat ini. Rakit sesuai keinginan Anda, di mana saja.
+
+
+SAM 3.1
+Mendeteksi, melakukan segmentasi, dan melacak objek dari perintah teks, baik gambar maupun video.
+
+
+Transkripsi Suara Muse
+Transkripsikan ucapan ke teks dengan diarization pembicara dan deteksi giliran bicara.
+
+
+Gambar Muse
+Model citra agensi yang merencanakan, mengoreksi diri sendiri, dan menyempurnakan.
+
+
+Kilauan Muse
+Dirancang untuk memungkinkan agen lokal yang selalu aktif, tersedia di Hugging Face.
+
+
+Muse Spark 1.2
+Model yang dioptimalkan untuk pengkodean dan dirancang khusus untuk alur kerja agen.
+
+
+Muse Spark 1.1
+Dirancang untuk alur kerja berbasis agen, pengkodean, penggunaan komputer & persepsi multimodal.
+
+Temui Muse Wonder dan Muse Wonder Full
+
+Perencanaan maraton
+
+Pengembang game
+
+Susunan tempat duduk pernikahan
+Pemrograman di garis depan
+Selesaikan tugas rekayasa yang kompleks dalam repositori besar, membuat dan memverifikasi perubahan di berbagai file secara paralel.
+Agen yang sudah lama beroperasi
+Penggunaan komputer tingkat lanjut
+Memori aktif
+Muse Wonder Full
+MULAI
+Lebih banyak cara untuk membangun.
+Kode Muse
+Pemrograman multi-agen di terminal Anda. Dirancang untuk Muse Wonder dan Muse Spark.
+Mulai membangun
+API Model Meta
+Akses langsung, mandiri, dan terjangkau ke model-model Muse.
+Mulai membangun
+OpenRouter
+Integrasikan model Muse ke dalam alat dan alur kerja Anda yang sudah ada.
+Mulai membangun
+Buku masak dan panduan cepat
+Baca dokumentasi
+Mulai cepat
+Permintaan kerja pertama Anda dalam waktu kurang dari lima menit. Arahkan klien yang kompatibel dengan OpenAI SDK Anda yang sudah ada ke Meta Model API.
+Pelajari selengkapnya
+Orkestrasi multi-agen
+Bentuk tim beranggotakan empat orang yang mampu mengubah ide produk satu baris menjadi aplikasi SaaS yang berfungsi.
+Pelajari selengkapnya
+Penyebaran agen
+Gabungkan beberapa subagen ke dalam pohon kerja yang terisolasi untuk menangani pekerjaan paralel tanpa tabrakan di tengah jalan.
+Pelajari selengkapnya
+Penggunaan komputer
+Beri Muse Wonder mata dan sepasang tangan, dan ia dapat membangun perangkat lunak seperti yang Anda lakukan.
+Pelajari selengkapnya
+Agen GitHub
+Bangun bot GitHub otonom di Meta Model API dengan Muse Wonder dan OpenCode.
+Pelajari selengkapnya
+Pencarian dasar
+Berikan akses langsung ke web untuk model Anda. Tambahkan satu alat ke permintaan Anda untuk mendapatkan informasi secara real-time.
+Pelajari selengkapnya
+Pembaruan terbaru
+
+Model Muse
+Wujudkan ide-ide Anda dengan Muse Wonder dan Muse Wonder Full.
+Muse Wonder mendukung pengkodean mutakhir, agen yang berjalan lama, dan penggunaan komputer tingkat lanjut untuk mengatasi alur kerja pengembang yang paling penting.
+
+Model Muse
+Bangun dengan Muse Spark Open
+Unduh Muse Spark Open, sebuah model open-weight 816B untuk pengkodean agenik. Sajikan dengan SGLang, vLLM, atau Apple MLX, jalankan pada API yang dihosting, atau lakukan fine-tuning.
+
+Kode Muse
+Muse Code: Paket dan fitur baru
+Muse Code kini telah keluar dari versi beta dengan fitur dan pembaruan baru yang dirancang untuk membantu Anda bekerja lebih cepat dan lebih cerdas.
+Jadilah orang pertama yang tahu
+Berlangganan untuk mendapatkan pembaruan tentang berita AI terbaru, terobosan, dan acara mendatang dari Meta melalui buletin pengembang kami.
+
+Berlangganan
+
+Produk
+Model
+Dokumentasi
+Sumber daya
+Masyarakat
+Syarat & kebijakan
+
